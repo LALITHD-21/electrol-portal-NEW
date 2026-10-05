@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import MobileSplashScreen from "@/components/MobileSplashScreen";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -39,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
+        <MobileSplashScreen />
         {children}
       </body>
     </html>
