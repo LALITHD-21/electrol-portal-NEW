@@ -71,13 +71,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className="flex items-center group transition-all duration-200 hover:scale-[1.01] flex-shrink-0"
                 title="ELECTORAL-LOOKUP OF South-East & Central Karnataka Constituency"
               >
-                <div className="relative h-11 sm:h-16 md:h-18 lg:h-20 w-44 sm:w-80 md:w-96 lg:w-[480px] flex items-center">
+                {/* Mobile View: High-res Circular App Logo + Clean Title */}
+                <div className="flex sm:hidden items-center gap-2">
+                  <div className="relative w-10 h-10 flex-shrink-0">
+                    <Image
+                      src="/app-logo.png"
+                      alt="ELECTORAL-LOOKUP"
+                      fill
+                      priority
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <span className="text-xs font-black tracking-tight text-slate-900 leading-none">
+                      ELECTORAL-<span className="text-brand-600">LOOKUP</span>
+                    </span>
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight mt-0.5">
+                      Karnataka Council
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tablet / Desktop View: Full horizontal branding banner */}
+                <div className="hidden sm:flex relative sm:h-16 md:h-18 lg:h-20 sm:w-80 md:w-96 lg:w-[480px] items-center">
                   <Image
                     src="/logo-horizontal.png"
                     alt="ELECTORAL-LOOKUP OF South-East & Central Karnataka Constituency"
                     fill
                     priority
-                    sizes="(max-width: 640px) 180px, (max-width: 1024px) 380px, 480px"
+                    sizes="(max-width: 1024px) 380px, 480px"
                     className="object-contain object-left drop-shadow-2xs group-hover:drop-shadow-xs transition-all"
                   />
                 </div>
@@ -214,8 +236,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="space-y-3 pb-2">
           {/* Quick Info Tile */}
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center text-brand-700 flex-shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="relative w-11 h-11 rounded-xl flex-shrink-0">
+              <Image
+                src="/app-logo.png"
+                alt="App Logo"
+                fill
+                className="object-contain"
+              />
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-slate-900 truncate">
