@@ -156,3 +156,21 @@ export interface CompareResponse {
     stats: DashboardStatsResponse;
   };
 }
+
+export interface LiveActivityBucket {
+  t: string;
+  count: number;
+}
+
+export interface LiveDataResponse {
+  version: string;
+  total: number;
+  snapshotAt: string | null;
+  addedLastWindow: number;
+  windowMinutes: number;
+  activityCapped: boolean;
+  buckets: LiveActivityBucket[];
+  selfHealed: boolean;
+  serverTime: string;
+}
+

@@ -27,6 +27,7 @@ venv/
 # --- Node ---
 node_modules/
 .next/
+.firebase/
 out/
 *.tsbuildinfo
 
@@ -40,7 +41,6 @@ Desktop.ini
 etl/scratch_*
 etl/*.txt
 etl/page81_*
-web/*.js
 
 # --- IDE ---
 .vscode/

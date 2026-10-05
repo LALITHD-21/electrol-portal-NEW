@@ -17,20 +17,20 @@ function formatPhoneDisplay(phone: string | null): string {
   if (!phone) return '—';
   const digits = String(phone).replace(/\D/g, '');
   if (digits.length === 10) {
-    return `${digits.slice(0, 5)} ${digits.slice(5)}`;
+    return `${digits.slice(0, 5)}\u00A0${digits.slice(5)}`;
   }
   return digits || '—';
 }
 
 export default function ProfileTable({ elector, onEditRequest }: ProfileTableProps) {
   const mainRows = [
-    { label: 'EPIC Number', value: elector.epic_number, formatted: formatEpicForDisplay(elector.epic_number), isMono: true },
-    { label: 'Serial Number', value: elector.serial_number?.toString() || '—' },
+    { label: 'EPIC Number', value: elector.epic_number, formatted: formatEpicForDisplay(elector.epic_number), isMono: true, nowrap: true },
+    { label: 'Serial Number', value: elector.serial_number?.toString() || '—', isMono: true, nowrap: true },
     { label: 'Full Name', value: elector.name },
     { label: 'Relative Name', value: elector.relative_name || '—' },
     { label: 'Sex', value: elector.sex === 'M' ? 'Male (M)' : elector.sex === 'F' ? 'Female (F)' : (elector.sex || '—') },
-    { label: 'Age', value: elector.age ? `${elector.age} years` : '—' },
-    { label: 'WhatsApp / Mobile', value: formatPhoneDisplay(elector.whatsapp_mob), isMono: true },
+    { label: 'Age', value: elector.age ? `${elector.age} years` : '—', nowrap: true },
+    { label: 'WhatsApp / Mobile', value: formatPhoneDisplay(elector.whatsapp_mob), isMono: true, nowrap: true },
     { label: 'Caste', value: elector.caste || '—' },
     { label: 'Address', value: elector.address || '—' },
     { label: 'Qualification', value: elector.qualification || '—' },
@@ -48,7 +48,7 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
   ];
 
   const pollingRows = [
-    { label: 'Part Number', value: elector.part_number || '—', isMono: true },
+    { label: 'Part Number', value: elector.part_number ? `Part ${elector.part_number}` : '—', isMono: true, nowrap: true },
     { label: 'Polling Station', value: elector.polling_station_name || '—' },
     { label: 'Polling Address', value: elector.polling_address || '—' },
   ];
@@ -89,13 +89,13 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
 
       {/* Printable Data Table */}
       <div className="printable-table bg-white rounded-3xl border border-slate-200/80 shadow-soft-xl overflow-hidden">
-        <table className="w-full text-left border-collapse min-w-[300px]">
+        <table className="w-full text-left border-collapse table-fixed">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200/80">
-              <th className="py-3.5 px-4 sm:px-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 w-32 sm:w-48">
+              <th className="py-3.5 px-4 sm:px-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 w-[38%] sm:w-[32%] sm:max-w-[180px]">
                 Attribute
               </th>
-              <th className="py-3.5 px-4 sm:px-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+              <th className="py-3.5 px-4 sm:px-6 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 w-[62%] sm:w-[68%]">
                 Elector Detail
               </th>
             </tr>
@@ -109,13 +109,13 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
                   index % 2 === 0 ? 'bg-white hover:bg-indigo-50/20' : 'bg-slate-50/40 hover:bg-indigo-50/20'
                 }`}
               >
-                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-500 align-top">
+                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-500 align-top break-words">
                   {row.label}
                 </td>
                 <td
-                  className={`py-3.5 px-4 sm:px-6 text-xs sm:text-sm text-slate-900 leading-relaxed ${
+                  className={`py-3.5 px-4 sm:px-6 text-xs sm:text-sm text-slate-900 leading-relaxed align-top ${
                     row.isMono ? 'epic-mono font-extrabold text-indigo-700' : 'font-semibold'
-                  }`}
+                  } ${row.nowrap ? 'whitespace-nowrap' : 'break-words'}`}
                 >
                   {row.formatted || row.value}
                 </td>
@@ -139,10 +139,10 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
                   index % 2 === 0 ? 'bg-white hover:bg-sky-50/20' : 'bg-slate-50/40 hover:bg-sky-50/20'
                 }`}
               >
-                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-500 align-top">
+                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-500 align-top break-words">
                   {row.label}
                 </td>
-                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed">
+                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed align-top break-words">
                   {row.value}
                 </td>
               </tr>
@@ -165,10 +165,10 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
                   index % 2 === 0 ? 'bg-white hover:bg-violet-50/20' : 'bg-slate-50/40 hover:bg-violet-50/20'
                 }`}
               >
-                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-500 align-top">
+                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-500 align-top break-words">
                   {row.label}
                 </td>
-                <td className={`py-3.5 px-4 sm:px-6 text-xs sm:text-sm text-slate-900 leading-relaxed ${row.isMono ? 'epic-mono font-extrabold' : 'font-semibold'}`}>
+                <td className={`py-3.5 px-4 sm:px-6 text-xs sm:text-sm text-slate-900 leading-relaxed align-top ${row.isMono ? 'epic-mono font-extrabold' : 'font-semibold'} ${row.nowrap ? 'whitespace-nowrap' : 'break-words'}`}>
                   {row.value}
                 </td>
               </tr>

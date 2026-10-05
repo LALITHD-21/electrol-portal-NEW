@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap');
-
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -19,22 +17,120 @@
 * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+}
+
+html {
+  /* Prevent horizontal scroll globally without breaking sticky layouts */
+  overflow-x: clip;
+  height: 100%;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+  /* Kannada and Inter safe font fallback stack */
+  font-family: var(--font-sans), 'Inter', 'Noto Sans Kannada', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+/* Touch controls: prevent double tap zoom delay and text selection on buttons */
+button,
+[role="button"],
+a,
+input[type="button"],
+input[type="submit"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Crucial: Prevent iOS Safari auto-zoom on input focus by keeping font size >= 16px on mobile */
+@media screen and (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Monospace styling for EPIC */
 .epic-mono {
-  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  font-family: var(--font-mono), ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
   letter-spacing: 0.06em;
 }
 
-/* Custom Animations */
+/* Tabular numbers for live counters (prevents width jitter while tweening) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Design System Primitives ─────────────────────────────── */
+@layer components {
+  .card {
+    @apply bg-white border border-slate-200/80 rounded-2xl shadow-card transition-all duration-200;
+  }
+  .card-interactive {
+    @apply card hover:shadow-card-hover hover:border-slate-300/90;
+  }
+  .card-header {
+    @apply flex items-start justify-between gap-3 mb-3;
+  }
+  .card-title {
+    @apply text-sm font-bold text-slate-800 tracking-tight;
+  }
+  .card-subtitle {
+    @apply text-xs text-slate-500;
+  }
+  .icon-chip {
+    @apply p-2 rounded-xl border flex items-center justify-center flex-shrink-0;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-150
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2
+      disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+  }
+  .btn-primary {
+    @apply btn px-4 py-2.5 bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md;
+  }
+  .btn-secondary {
+    @apply btn px-4 py-2.5 bg-white text-slate-700 border border-slate-200 shadow-xs hover:bg-slate-50 hover:border-slate-300;
+  }
+  .btn-ghost {
+    @apply btn px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400
+      shadow-xs transition focus:outline-none focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2;
+  }
+
+  /* Shimmer skeleton */
+  .skeleton {
+    @apply relative overflow-hidden bg-slate-100 rounded-lg;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+}
+
+/* ─── Keyframes (also referenced by legacy utility classes) ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -63,6 +159,27 @@ body {
 @keyframes floatSoft {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-4px); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out both;
+}
+
+.bg-tech-grid {
+  background-size: 36px 36px;
+  background-image: 
+    linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
 }
 
 .animate-fadeIn {
@@ -98,8 +215,8 @@ body {
 
 .glass-strong {
   background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .glass-card {
@@ -126,10 +243,17 @@ body {
   box-shadow: 0 16px 36px -10px rgba(79, 70, 229, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
 }
 
-/* Focus Ring */
+/* Focus Ring: keep keyboard focus visible, hide for mouse */
 input:focus-visible,
 button:focus-visible {
   outline: none;
+}
+a:focus-visible,
+button:focus-visible,
+[role='button']:focus-visible,
+[role='tab']:focus-visible {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6366f1;
+  border-radius: 0.75rem;
 }
 
 /* Stagger children animation */
@@ -137,14 +261,25 @@ button:focus-visible {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 70ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 140ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 210ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+
+/* Recharts polish */
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.recharts-sector:focus,
+.recharts-rectangle:focus {
+  outline: none;
+}
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -152,9 +287,24 @@ button:focus-visible {
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+  background-clip: content-box;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Print stylesheet for printable table view */

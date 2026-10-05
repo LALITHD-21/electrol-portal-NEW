@@ -11,6 +11,7 @@ import {
   Home,
   Vote,
 } from 'lucide-react';
+import AnimatedNumber from '@/components/ui/AnimatedNumber';
 
 export interface HierarchyTilesProps {
   hierarchy?: DashboardHierarchy;
@@ -105,7 +106,7 @@ export function HierarchyTiles({ hierarchy, isLoading = false }: HierarchyTilesP
     <div className="w-full space-y-2.5">
       <div className="flex items-center justify-between px-1">
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-indigo-500" />
+          <span className="w-2 h-2 rounded-full bg-brand-500" />
           <span>Administrative Hierarchy Drill-Down</span>
         </h3>
         <span className="text-[11px] text-slate-400 font-semibold">100% Karnataka Electoral Mapping</span>
@@ -117,7 +118,7 @@ export function HierarchyTiles({ hierarchy, isLoading = false }: HierarchyTilesP
           return (
             <div
               key={tile.label}
-              className={`relative bg-white rounded-2xl border border-slate-200/80 ${tile.borderColor} p-3.5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden group flex flex-col justify-between`}
+              className={`relative card-interactive ${tile.borderColor} p-3.5 overflow-hidden group flex flex-col justify-between`}
             >
               {/* Subtle top background gradient glow */}
               <div
@@ -137,9 +138,9 @@ export function HierarchyTiles({ hierarchy, isLoading = false }: HierarchyTilesP
                 <div className="relative">
                   <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 font-mono">
                     {isLoading || !hierarchy ? (
-                      <span className="inline-block w-10 h-7 bg-slate-100 rounded animate-pulse" />
+                      <span className="inline-block w-10 h-7 skeleton" />
                     ) : (
-                      (tile.value ?? 0).toLocaleString('en-IN')
+                      <AnimatedNumber value={tile.value ?? 0} duration={800} />
                     )}
                   </span>
                 </div>
@@ -157,3 +158,5 @@ export function HierarchyTiles({ hierarchy, isLoading = false }: HierarchyTilesP
     </div>
   );
 }
+
+export default HierarchyTiles;

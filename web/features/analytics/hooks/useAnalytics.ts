@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardStatsResponse } from '../types';
 import { AnalyticsQueryParams } from '../schema';
+import { useLiveData } from './useLiveData';
 
 export function useAnalytics() {
   const searchParams = useSearchParams();
@@ -27,11 +28,25 @@ export function useAnalytics() {
   const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
 
   const isMountedRef = useRef<boolean>(true);
+  const abortCtrlRef = useRef<AbortController | null>(null);
+  const hasLoadedOnceRef = useRef<boolean>(false);
+  const currentFiltersRef = useRef<AnalyticsQueryParams>(filters);
+  currentFiltersRef.current = filters;
 
   const fetchStats = useCallback(
-    async (currentFilters: AnalyticsQueryParams, isManual = false) => {
-      if (isManual) setIsRefreshing(true);
-      else if (!stats) setIsLoading(true);
+    async (currentFilters: AnalyticsQueryParams, isManual = false, isSilentSync = false) => {
+      // Abort in-flight requests if filter changed
+      if (abortCtrlRef.current) {
+        abortCtrlRef.current.abort();
+      }
+      const abortCtrl = new AbortController();
+      abortCtrlRef.current = abortCtrl;
+
+      if (isManual) {
+        setIsRefreshing(true);
+      } else if (!hasLoadedOnceRef.current && !isSilentSync) {
+        setIsLoading(true);
+      }
 
       try {
         const params = new URLSearchParams();
@@ -40,7 +55,11 @@ export function useAnalytics() {
         if (currentFilters.taluk) params.set('taluk', currentFilters.taluk);
         if (currentFilters.part) params.set('part', currentFilters.part);
 
-        const res = await fetch(`/api/analytics/stats?${params.toString()}`);
+        const res = await fetch(`/api/analytics/stats?${params.toString()}`, {
+          cache: 'no-store',
+          signal: abortCtrl.signal,
+        });
+
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
           throw new Error(errData?.error || 'Failed to fetch analytics statistics');
@@ -50,9 +69,11 @@ export function useAnalytics() {
         if (isMountedRef.current) {
           setStats(data);
           setError(null);
+          hasLoadedOnceRef.current = true;
           setLastRefreshed(data.refreshed_at || new Date().toISOString());
         }
       } catch (err: unknown) {
+        if ((err as Error)?.name === 'AbortError') return;
         if (isMountedRef.current) {
           const message = err instanceof Error ? err.message : 'Analytics loading error';
           setError(message);
@@ -64,10 +85,19 @@ export function useAnalytics() {
         }
       }
     },
-    [stats]
+    [] // Stable dependencies - eliminates fetch loop bug
   );
 
-  // Sync filters to browser URL without reloading
+  // Real-time live data monitoring: when version changes, trigger silent background refetch
+  const { liveData, status: liveStatus, lastSyncAt, refreshLive } = useLiveData({
+    pollInterval: 20000,
+    onVersionChange: () => {
+      // Data version changed in DB - seamlessly refetch stats without flash
+      fetchStats(currentFiltersRef.current, false, true);
+    },
+  });
+
+  // Sync filters to browser URL without full reload
   const updateUrl = useCallback((currentFilters: AnalyticsQueryParams) => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams();
@@ -118,14 +148,11 @@ export function useAnalytics() {
     isMountedRef.current = true;
     fetchStats(filters);
 
-    // 60-second polling fallback
-    const interval = setInterval(() => {
-      fetchStats(filters, true);
-    }, 60000);
-
     return () => {
       isMountedRef.current = false;
-      clearInterval(interval);
+      if (abortCtrlRef.current) {
+        abortCtrlRef.current.abort();
+      }
     };
   }, [fetchStats, filters]);
 
@@ -139,9 +166,15 @@ export function useAnalytics() {
     error,
     lastRefreshed,
     activeFilterCount,
+    liveData,
+    liveStatus,
+    lastSyncAt,
     handleFilterChange,
     handleResetFilters,
     handleCrossFilter,
-    refresh: () => fetchStats(filters, true),
+    refresh: () => {
+      refreshLive();
+      fetchStats(filters, true);
+    },
   };
 }

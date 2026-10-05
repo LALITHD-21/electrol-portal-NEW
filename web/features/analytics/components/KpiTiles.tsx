@@ -14,6 +14,7 @@ import {
   CopyCheck,
   CameraOff,
 } from 'lucide-react';
+import AnimatedNumber from '@/components/ui/AnimatedNumber';
 
 export interface KpiTilesProps {
   totals?: DashboardTotals;
@@ -42,7 +43,6 @@ export function KpiTiles({
 
   const isDataReady = !isLoading && !!totals && !!coverage && !!duplicates;
 
-  // Exact reconciliation percentages
   const malePct =
     t.total > 0
       ? Math.round((t.male / t.total) * 1000) / 10
@@ -67,20 +67,20 @@ export function KpiTiles({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {/* 1. Total Electors */}
-        <div className="relative bg-white rounded-2xl border border-slate-200/80 hover:border-indigo-300 p-4 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-indigo-600" />
+        <div className="relative card-interactive p-4 overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 to-indigo-600" />
           <div className="relative flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Total Electors</span>
-            <div className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+            <div className="p-1.5 rounded-xl bg-brand-50 text-brand-600 border border-brand-100">
               <Users className="w-3.5 h-3.5" />
             </div>
           </div>
           <div className="relative mt-2">
             <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
               {!isDataReady ? (
-                <span className="inline-block w-20 h-7 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block w-20 h-7 skeleton" />
               ) : (
-                t.total.toLocaleString('en-IN')
+                <AnimatedNumber value={t.total} duration={800} />
               )}
             </div>
             <div className="text-[10px] text-slate-500 mt-1 font-semibold">
@@ -90,7 +90,7 @@ export function KpiTiles({
         </div>
 
         {/* 2. Male Electors */}
-        <div className="relative bg-white rounded-2xl border border-slate-200/80 hover:border-blue-300 p-4 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden">
+        <div className="relative card-interactive p-4 overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600" />
           <div className="relative flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Male Voters</span>
@@ -101,9 +101,9 @@ export function KpiTiles({
           <div className="relative mt-2">
             <div className="text-2xl sm:text-3xl font-black text-blue-700 font-mono">
               {!isDataReady ? (
-                <span className="inline-block w-16 h-7 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block w-16 h-7 skeleton" />
               ) : (
-                t.male.toLocaleString('en-IN')
+                <AnimatedNumber value={t.male} duration={800} />
               )}
             </div>
             <div className="text-[10px] text-blue-600 mt-1 font-bold">
@@ -113,7 +113,7 @@ export function KpiTiles({
         </div>
 
         {/* 3. Female Electors */}
-        <div className="relative bg-white rounded-2xl border border-slate-200/80 hover:border-pink-300 p-4 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden">
+        <div className="relative card-interactive p-4 overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 to-pink-600" />
           <div className="relative flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Female Voters</span>
@@ -124,9 +124,9 @@ export function KpiTiles({
           <div className="relative mt-2">
             <div className="text-2xl sm:text-3xl font-black text-pink-700 font-mono">
               {!isDataReady ? (
-                <span className="inline-block w-16 h-7 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block w-16 h-7 skeleton" />
               ) : (
-                t.female.toLocaleString('en-IN')
+                <AnimatedNumber value={t.female} duration={800} />
               )}
             </div>
             <div className="text-[10px] text-pink-600 mt-1 font-bold flex items-center justify-between">
@@ -141,7 +141,7 @@ export function KpiTiles({
         </div>
 
         {/* 4. Mobile Outreach Reach */}
-        <div className="relative bg-white rounded-2xl border border-slate-200/80 hover:border-emerald-300 p-4 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden">
+        <div className="relative card-interactive p-4 overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-emerald-600" />
           <div className="relative flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Mobile Reach</span>
@@ -152,9 +152,9 @@ export function KpiTiles({
           <div className="relative mt-2">
             <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-mono">
               {!isDataReady ? (
-                <span className="inline-block w-14 h-7 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block w-14 h-7 skeleton" />
               ) : (
-                cov.mobile.count.toLocaleString('en-IN')
+                <AnimatedNumber value={cov.mobile.count} duration={800} />
               )}
             </div>
             <div className="text-[10px] text-emerald-600 mt-1 font-bold">
@@ -164,7 +164,7 @@ export function KpiTiles({
         </div>
 
         {/* 5. Caste Intelligence (Admin Only) */}
-        <div className="relative bg-white rounded-2xl border border-slate-200/80 hover:border-amber-300 p-4 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden">
+        <div className="relative card-interactive p-4 overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-amber-600" />
           <div className="relative flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Caste Intel</span>
@@ -175,9 +175,9 @@ export function KpiTiles({
           <div className="relative mt-2">
             <div className="text-2xl sm:text-3xl font-black text-amber-700 font-mono">
               {!isDataReady ? (
-                <span className="inline-block w-14 h-7 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block w-14 h-7 skeleton" />
               ) : hasCasteAccess ? (
-                cov.caste.count.toLocaleString('en-IN')
+                <AnimatedNumber value={cov.caste.count} duration={800} />
               ) : (
                 <span className="text-sm font-semibold text-slate-400">Locked</span>
               )}
@@ -189,7 +189,7 @@ export function KpiTiles({
         </div>
 
         {/* 6. Suspected Duplicates */}
-        <div className="relative bg-white rounded-2xl border border-slate-200/80 hover:border-rose-300 p-4 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden">
+        <div className="relative card-interactive p-4 overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-rose-600" />
           <div className="relative flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Duplicates</span>
@@ -200,19 +200,19 @@ export function KpiTiles({
           <div className="relative mt-2">
             <div className="text-2xl sm:text-3xl font-black text-rose-700 font-mono">
               {!isDataReady ? (
-                <span className="inline-block w-14 h-7 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block w-14 h-7 skeleton" />
               ) : (
-                dup.rows.toLocaleString('en-IN')
+                <AnimatedNumber value={dup.rows} duration={800} />
               )}
             </div>
             <div className="text-[10px] text-rose-600 mt-1 font-bold">
-              {dup.groups.toLocaleString('en-IN')} groups (Rule A)
+              <AnimatedNumber value={dup.groups} duration={800} /> groups (Rule A)
             </div>
           </div>
         </div>
 
         {/* 7. Photo Coverage */}
-        <div className="relative bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300 p-4 shadow-sm hover:shadow-md transition-all duration-200 group overflow-hidden">
+        <div className="relative card-interactive p-4 overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-400 to-slate-500" />
           <div className="relative flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Photo Coverage</span>
@@ -223,7 +223,7 @@ export function KpiTiles({
           <div className="relative mt-2">
             <div className="text-2xl sm:text-3xl font-black text-slate-700 font-mono">
               {!isDataReady ? (
-                <span className="inline-block w-12 h-7 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block w-12 h-7 skeleton" />
               ) : (
                 `${cov.photo.pct}%`
               )}
@@ -237,3 +237,5 @@ export function KpiTiles({
     </div>
   );
 }
+
+export default KpiTiles;

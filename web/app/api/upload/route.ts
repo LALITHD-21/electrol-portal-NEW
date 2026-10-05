@@ -413,6 +413,14 @@ export async function POST(req: NextRequest) {
 
         const durationMs = Date.now() - startTime;
 
+        // Trigger snapshot refresh so live analytics immediately reflects the ingested batch
+        try {
+            const { refreshDashboardSnapshot } = await import('@/lib/analytics/refreshSnapshot');
+            refreshDashboardSnapshot(supabase).catch(() => {});
+        } catch {
+            // Non-blocking
+        }
+
         return NextResponse.json({
             success: true,
             fileName: fileName,

@@ -1,16 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  weight: ["500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -19,13 +21,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Elector Lookup Portal",
-  description: "Internal portal for secure voter profile lookup by EPIC number",
+  title: "ELECTORAL-LOOKUP OF South-East & Central Karnataka Constituency",
+  description: "Internal portal for secure voter profile lookup by EPIC number across Karnataka Legislative Council rolls",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Elector Lookup",
+    title: "Electoral Lookup",
   },
 };
 
@@ -35,8 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="antialiased bg-gray-50 text-gray-900 min-h-screen flex flex-col font-sans">
+    <html lang="en" className={`${jakarta.variable} ${jetbrainsMono.variable}`}>
+      <body className="antialiased bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
         {children}
       </body>
     </html>

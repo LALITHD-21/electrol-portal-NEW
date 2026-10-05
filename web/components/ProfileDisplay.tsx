@@ -198,7 +198,7 @@ export default function ProfileDisplay({
               </div>
 
               {/* View Output */}
-              <div className="pt-1">
+              <div className="pt-1 pb-44 sm:pb-8">
                 {view === 'card' ? (
                   <ProfileCard
                     elector={currentElector}
@@ -210,6 +210,67 @@ export default function ProfileDisplay({
                     onEditRequest={() => setIsEditModalOpen(true)}
                   />
                 )}
+              </div>
+
+              {/* Sticky Mobile Action Bar (Call, WhatsApp, Edit, Copy) */}
+              <div className="sm:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-sticky bg-white/95 backdrop-blur-md border-t border-slate-200/90 p-2.5 shadow-elevated">
+                <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
+                  {currentElector.whatsapp_mob ? (
+                    <a
+                      href={`tel:${String(currentElector.whatsapp_mob).replace(/\D/g, '')}`}
+                      aria-label="Call Elector"
+                      className="flex flex-col items-center justify-center py-2 px-1 bg-emerald-50 text-emerald-700 border border-emerald-200/90 rounded-xl active:bg-emerald-100 min-h-[44px] transition"
+                    >
+                      <span className="text-xs font-bold leading-tight">Call</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex flex-col items-center justify-center py-2 px-1 bg-slate-50 text-slate-300 border border-slate-200 rounded-xl min-h-[44px]"
+                    >
+                      <span className="text-xs font-bold leading-tight">Call</span>
+                    </button>
+                  )}
+
+                  {currentElector.whatsapp_mob ? (
+                    <a
+                      href={`https://wa.me/91${String(currentElector.whatsapp_mob).replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="WhatsApp Elector"
+                      className="flex flex-col items-center justify-center py-2 px-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl active:bg-emerald-200 min-h-[44px] transition"
+                    >
+                      <span className="text-xs font-bold leading-tight">WhatsApp</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex flex-col items-center justify-center py-2 px-1 bg-slate-50 text-slate-300 border border-slate-200 rounded-xl min-h-[44px]"
+                    >
+                      <span className="text-xs font-bold leading-tight">WhatsApp</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="flex flex-col items-center justify-center py-2 px-1 bg-brand-50 text-brand-700 border border-brand-200 rounded-xl active:bg-brand-100 min-h-[44px] transition"
+                  >
+                    <span className="text-xs font-bold leading-tight">Edit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyDetails}
+                    className="flex flex-col items-center justify-center py-2 px-1 bg-white text-slate-700 border border-slate-200 rounded-xl active:bg-slate-100 min-h-[44px] transition"
+                  >
+                    <span className="text-xs font-bold leading-tight">
+                      {copied ? 'Copied' : 'Slip'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

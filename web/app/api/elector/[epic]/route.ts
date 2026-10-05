@@ -147,6 +147,14 @@ export async function PATCH(
       return NextResponse.json({ error: `Database update error: ${error.message}` }, { status: 500 });
     }
 
+    // Refresh dashboard snapshot asynchronously so real-time analytics updates instantly
+    try {
+      const { refreshDashboardSnapshot } = await import('@/lib/analytics/refreshSnapshot');
+      refreshDashboardSnapshot(supabase).catch(() => {});
+    } catch {
+      // Non-blocking
+    }
+
     return NextResponse.json(data as Elector, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
