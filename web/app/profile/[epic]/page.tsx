@@ -55,7 +55,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
             <div>
               <Link
-                href="/dashboard"
+                href="/search"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
               >
                 <ArrowLeft className="w-4 h-4" />

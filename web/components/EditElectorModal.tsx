@@ -18,7 +18,13 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Edit3
+  Edit3,
+  Phone,
+  Landmark,
+  Map,
+  Home,
+  Globe,
+  Layers
 } from 'lucide-react';
 import { formatEpicForDisplay } from '@/lib/utils';
 
@@ -37,6 +43,15 @@ interface FormDataState {
   address?: string | null;
   qualification?: string | null;
   occupation?: string | null;
+  whatsapp_mob?: string | null;
+  caste?: string | null;
+  district?: string | null;
+  ac_name?: string | null;
+  taluk?: string | null;
+  hobli?: string | null;
+  grama_panchayath?: string | null;
+  village?: string | null;
+  area_ward?: string | null;
   serial_number?: string | number | null;
   part_number?: string | null;
   polling_station_name?: string | null;
@@ -64,6 +79,15 @@ export default function EditElectorModal({
         address: elector.address || '',
         qualification: elector.qualification || '',
         occupation: elector.occupation || '',
+        whatsapp_mob: elector.whatsapp_mob || '',
+        caste: elector.caste || '',
+        district: elector.district || '',
+        ac_name: elector.ac_name || '',
+        taluk: elector.taluk || '',
+        hobli: elector.hobli || '',
+        grama_panchayath: elector.grama_panchayath || '',
+        village: elector.village || '',
+        area_ward: elector.area_ward || '',
         serial_number: elector.serial_number !== null && elector.serial_number !== undefined ? elector.serial_number : '',
         part_number: elector.part_number || '',
         polling_station_name: elector.polling_station_name || '',
@@ -104,6 +128,15 @@ export default function EditElectorModal({
       address: formData.address ? String(formData.address).trim() : null,
       qualification: formData.qualification ? String(formData.qualification).trim() : null,
       occupation: formData.occupation ? String(formData.occupation).trim() : null,
+      whatsapp_mob: formData.whatsapp_mob ? String(formData.whatsapp_mob).replace(/\D/g, '').trim() : null,
+      caste: formData.caste ? String(formData.caste).trim() : null,
+      district: formData.district ? String(formData.district).trim() : null,
+      ac_name: formData.ac_name ? String(formData.ac_name).trim() : null,
+      taluk: formData.taluk ? String(formData.taluk).trim() : null,
+      hobli: formData.hobli ? String(formData.hobli).trim() : null,
+      grama_panchayath: formData.grama_panchayath ? String(formData.grama_panchayath).trim() : null,
+      village: formData.village ? String(formData.village).trim() : null,
+      area_ward: formData.area_ward ? String(formData.area_ward).trim() : null,
       serial_number: formData.serial_number !== '' && formData.serial_number !== null && formData.serial_number !== undefined ? Number(formData.serial_number) : null,
       part_number: formData.part_number ? String(formData.part_number).trim() : null,
       polling_station_name: formData.polling_station_name ? String(formData.polling_station_name).trim() : null,
@@ -232,7 +265,7 @@ export default function EditElectorModal({
               </div>
 
               {/* Sex / Gender */}
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <UserCheck className="w-3.5 h-3.5 text-slate-400" />
                   <span>Gender</span>
@@ -247,6 +280,39 @@ export default function EditElectorModal({
                   <option value="M">Male (M)</option>
                   <option value="F">Female (F)</option>
                 </select>
+              </div>
+
+              {/* WhatsApp / Mobile */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <span>WhatsApp / Mobile</span>
+                </label>
+                <input
+                  type="tel"
+                  name="whatsapp_mob"
+                  value={formData.whatsapp_mob || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. 9379434328"
+                  maxLength={15}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Caste */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Caste</span>
+                </label>
+                <input
+                  type="text"
+                  name="caste"
+                  value={formData.caste || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. Vokkaliga, Lingayat"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
               </div>
             </div>
           </div>
@@ -314,10 +380,131 @@ export default function EditElectorModal({
             </div>
           </div>
 
-          {/* Section 4: Polling Station Info */}
+          {/* Section 4: Constituency & Location */}
           <div className="space-y-4">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
-              4. Polling Station & Serial Info
+              4. Constituency & Location
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* District */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Landmark className="w-3.5 h-3.5 text-slate-400" />
+                  <span>District</span>
+                </label>
+                <input
+                  type="text"
+                  name="district"
+                  value={formData.district || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. Chikkaballapura"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Assembly Constituency */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Assembly (AC)</span>
+                </label>
+                <input
+                  type="text"
+                  name="ac_name"
+                  value={formData.ac_name || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. Gauribidanur"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Taluk */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Map className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Taluk</span>
+                </label>
+                <input
+                  type="text"
+                  name="taluk"
+                  value={formData.taluk || ''}
+                  onChange={handleChange}
+                  placeholder="e.g. Gauribidanur"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Hobli */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Hobli</span>
+                </label>
+                <input
+                  type="text"
+                  name="hobli"
+                  value={formData.hobli || ''}
+                  onChange={handleChange}
+                  placeholder="Hobli name"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Gram Panchayat */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Home className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Gram Panchayat</span>
+                </label>
+                <input
+                  type="text"
+                  name="grama_panchayath"
+                  value={formData.grama_panchayath || ''}
+                  onChange={handleChange}
+                  placeholder="GP name"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Village */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Home className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Village</span>
+                </label>
+                <input
+                  type="text"
+                  name="village"
+                  value={formData.village || ''}
+                  onChange={handleChange}
+                  placeholder="Village name"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+
+              {/* Area / Ward */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Area / Ward</span>
+                </label>
+                <input
+                  type="text"
+                  name="area_ward"
+                  value={formData.area_ward || ''}
+                  onChange={handleChange}
+                  placeholder="Area or ward coverage"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Polling Station Info */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+              5. Polling Station & Serial Info
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -17,7 +17,7 @@ export default async function HomePage() {
   }
 
   if (hasUser) {
-    redirect('/dashboard');
+    redirect('/search');
   } else {
     redirect('/login');
   }

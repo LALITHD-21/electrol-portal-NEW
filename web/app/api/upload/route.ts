@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import * as XLSX from 'xlsx';
-import { cookies } from 'next/headers';
+import { requireRole, isAuthError } from '@/lib/auth/roles';
 
 interface ElectorInputRecord {
     serial_number?: number | null;
@@ -13,6 +13,15 @@ interface ElectorInputRecord {
     occupation?: string | null;
     age?: number | null;
     sex?: 'M' | 'F' | null;
+    whatsapp_mob?: string | null;
+    caste?: string | null;
+    district?: string | null;
+    ac_name?: string | null;
+    taluk?: string | null;
+    hobli?: string | null;
+    grama_panchayath?: string | null;
+    village?: string | null;
+    area_ward?: string | null;
     part_number?: string | null;
     polling_station_name?: string | null;
     polling_address?: string | null;
@@ -41,7 +50,16 @@ function canonicalizeKey(key: string): string {
     const k = key.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (k.includes('epic') || k.includes('voterid') || k.includes('idnumber')) return 'epic_number';
     if (k.includes('relative') || k.includes('father') || k.includes('husband') || k.includes('relation')) return 'relative_name';
-    if (k.includes('name') && !k.includes('relative') && !k.includes('father') && !k.includes('mother')) return 'name';
+    if (k.includes('name') && !k.includes('relative') && !k.includes('father') && !k.includes('mother') && !k.includes('station') && !k.includes('ac')) return 'name';
+    if (k.includes('mob') || k.includes('whatsapp') || k.includes('phone')) return 'whatsapp_mob';
+    if (k.includes('caste')) return 'caste';
+    if (k.includes('district')) return 'district';
+    if (k.includes('acname') || k.includes('assembly')) return 'ac_name';
+    if (k.includes('taluk')) return 'taluk';
+    if (k.includes('hobli')) return 'hobli';
+    if (k.includes('panchayat') || k.includes('panchayth') || k === 'gp') return 'grama_panchayath';
+    if (k.includes('village')) return 'village';
+    if (k.includes('area') || k.includes('ward')) return 'area_ward';
     if (k.includes('address') || k.includes('house') || k.includes('loc') || k.includes('residence')) return 'address';
     if (k.includes('qualification') || k.includes('education')) return 'qualification';
     if (k.includes('occupation') || k.includes('occupcation') || k.includes('job') || k.includes('work')) return 'occupation';
@@ -58,24 +76,10 @@ export async function POST(req: NextRequest) {
     const startTime = Date.now();
 
     try {
-        // Auth check: validate custom cookie-based session
-        const cookieStore = cookies();
-        const sessionCookie = cookieStore.get('elector_auth_session')?.value;
-        let isAuthenticated = false;
-
-        if (sessionCookie) {
-            try {
-                const decoded = JSON.parse(atob(sessionCookie));
-                if (decoded && decoded.expiresAt && decoded.expiresAt > Date.now()) {
-                    isAuthenticated = true;
-                }
-            } catch {
-                isAuthenticated = false;
-            }
-        }
-
-        if (!isAuthenticated) {
-            return NextResponse.json({ error: 'Unauthorized: Log in required' }, { status: 401 });
+        // Auth check: require admin or operator role
+        const auth = requireRole(req, 'admin', 'operator');
+        if (isAuthError(auth)) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status });
         }
 
         const supabase = createAdminClient();
@@ -364,6 +368,15 @@ export async function POST(req: NextRequest) {
                 occupation: cleanedObj.occupation ? String(cleanedObj.occupation).trim() : null,
                 age: ageNum,
                 sex: sexVal,
+                whatsapp_mob: cleanedObj.whatsapp_mob ? String(cleanedObj.whatsapp_mob).replace(/\D/g, '').trim() || null : null,
+                caste: cleanedObj.caste ? String(cleanedObj.caste).trim() || null : null,
+                district: cleanedObj.district ? String(cleanedObj.district).trim() || null : null,
+                ac_name: cleanedObj.ac_name ? String(cleanedObj.ac_name).trim() || null : null,
+                taluk: cleanedObj.taluk ? String(cleanedObj.taluk).trim() || null : null,
+                hobli: cleanedObj.hobli ? String(cleanedObj.hobli).trim() || null : null,
+                grama_panchayath: cleanedObj.grama_panchayath ? String(cleanedObj.grama_panchayath).trim() || null : null,
+                village: cleanedObj.village ? String(cleanedObj.village).trim() || null : null,
+                area_ward: cleanedObj.area_ward ? String(cleanedObj.area_ward).trim() || null : null,
                 serial_number: slNo,
                 part_number: partNo,
                 polling_station_name: cleanedObj.polling_station_name ? String(cleanedObj.polling_station_name).trim() : (pollingInfo?.station || null),

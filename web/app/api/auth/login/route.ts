@@ -1,16 +1,23 @@
 import { NextResponse } from 'next/server';
+import type { UserRole } from '@/lib/auth/roles';
 
 // Preset authorized accounts
-const AUTHORIZED_ACCOUNTS: Record<string, { email: string; role: string; password: string }> = {
+// Roles MUST match canonical UserRole values: 'admin' | 'operator' | 'field_agent'
+const AUTHORIZED_ACCOUNTS: Record<string, { email: string; role: UserRole; password: string }> = {
   admin: {
     email: 'admin@electorportal.com',
-    role: 'System Admin',
+    role: 'admin',
     password: '1234@portal',
   },
   operator: {
     email: 'operator@electorportal.com',
-    role: 'Data Operator',
+    role: 'operator',
     password: '1234@admin',
+  },
+  field: {
+    email: 'field@electorportal.com',
+    role: 'field_agent',
+    password: '1234@field',
   },
 };
 

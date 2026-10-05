@@ -4,7 +4,15 @@ export async function middleware(request: NextRequest) {
   try {
     const { pathname } = request.nextUrl;
 
-    const PROTECTED_ROUTES = ['/dashboard', '/profile'];
+    const PROTECTED_ROUTES = [
+      '/dashboard',
+      '/profile',
+      '/search',
+      '/directory',
+      '/analytics',
+      '/field',
+      '/admin',
+    ];
     const AUTH_ROUTES = ['/login'];
 
     const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
@@ -35,9 +43,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // 3. Authenticated + trying to access /login → redirect to /dashboard
+    // 3. Authenticated + trying to access /login → redirect to /search
     if (isAuthenticated && isAuthRoute) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/search', request.url));
     }
 
     return NextResponse.next();
@@ -53,5 +61,10 @@ export const config = {
     '/login',
     '/dashboard/:path*',
     '/profile/:path*',
+    '/search/:path*',
+    '/directory/:path*',
+    '/analytics/:path*',
+    '/field/:path*',
+    '/admin/:path*',
   ],
 };

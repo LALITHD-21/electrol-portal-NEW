@@ -50,3 +50,9 @@ web/*.js
 
 .vercel
 .env*
+*.xlsx
+*.xls
+*.csv
+cookies.txt
+web/cookies.txt
+*.tsbuildinfo

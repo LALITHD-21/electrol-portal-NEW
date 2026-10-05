@@ -58,18 +58,30 @@ Built for internal operations teams, field workers, and verification staff, auth
 
 ## ✨ Key Features
 
-- 🔍 **Instant EPIC Lookup Engine:** Real-time client-side formatting (auto-uppercase, non-alphanumeric strip) coupled with strict regex validation (`^[A-Z]{3}\d{7}$`) before issuing server requests.
-- ⚡ **Zero-Waterfall Server Components:** Built with Next.js 14 App Router and React Server Components (RSC) for direct server-side database querying without client-side network round-trips.
-- 🎛️ **Dual Interactive Presentation Modes:**
-  - **Visual Profile Card:** High-contrast key metrics (Age, Sex, Serial Number) with structured detail grids for administrative clarity.
-  - **Data-Dense Table View:** Clean 2-column tabular view complete with dedicated print stylesheet (`@media print`) designed for single-sheet A4 printing.
-- 🛡️ **Military-Grade Multi-Layer Security:**
-  - **Database Level:** Row Level Security (RLS) policies restrict all queries exclusively to authenticated users; public/anonymous access is hard-denied at the engine level.
-  - **Application Level:** Edge Middleware verifies session cookies on every protected route (`/dashboard`, `/profile/*`).
-  - **Credential Isolation:** High-privilege `SUPABASE_SERVICE_ROLE_KEY` is strictly confined to offline ETL operations and never bundled into frontend builds.
-  - **Zero PII Logging:** Voter demographics and personally identifiable information are never written to logs or console traces.
-- 🔄 **Idempotent High-Speed Ingestion:** Python ETL pipeline parses multi-sheet Excel workbooks and tabular PDFs, normalizes 30+ column naming variations, removes duplicates, and performs bulk upserts (`ON CONFLICT (epic_number) DO UPDATE`).
-- 💸 **100% Free-Tier Architecture:** Designed from the ground up to operate reliably on free-tier services (Supabase + Vercel Hobby) with zero hosting or database maintenance fees.
+- 🔍 **Module (A) Advanced Multi-Field Search Engine:**
+  - **Instant EPIC Lookup:** 0 ms in-memory client Map cache for exact-match EPIC queries.
+  - **Smart Query Routing:** Auto-detects 10-digit mobile numbers vs. names vs. EPIC patterns.
+  - **Trigram Name Search:** Fast fuzzy matching via PostgreSQL `pg_trgm` GIN indexes across 223k+ voters in < 200 ms.
+  - **Kannada-English Transliteration Engine:** Expands phonetic name variants (e.g. `Suresh` $\leftrightarrow$ `Sooresh`).
+  - **Booth Browse Mode:** Select any booth (Part #) to browse voters ordered by official electoral serial number.
+  - **CSV Export:** Role-protected (`admin` / `operator`) export of current search results.
+- 📊 **Module (B) Electoral Analytics & Strategic Intelligence:**
+  - **100% Reconciled KPIs:** Real SQL counts where Male + Female + Unspecified = Total (223,789 verified voters).
+  - **Hierarchy Visualizer:** 7 distinct administrative tiers (Districts, ACs, Taluks, Hoblis, GPs, Villages, Booths).
+  - **Interactive Demographic Visuals:** Gender Donut Chart (with Sex Ratio F/1000M), Age Cohorts pyramid (18-25 youth cohort), and District elector strength.
+  - **Cross-Filtering & Sticky Cascading Bar:** Click any district or chart slice to filter the entire dashboard.
+  - **Canonical Normalization:** Aliases unify education (`B.Com` / `BCOM`), occupations (`Private Sector`, `Teacher`), and caste groups.
+  - **Caste Intelligence Security:** Aggregate community distributions visible strictly to administrators.
+  - **Data Quality & Audit Panel:** Column completeness matrix, age anomalies (<18, >110, null), and Rule A duplicate clusters.
+  - **Territory Compare Mode:** Side-by-side comparative analysis of any two districts or assembly constituencies.
+  - **Polling Booths Directory & Dossier:** Sortable 147-booth directory with single-click A4 Printable Dossiers and CSV export.
+- 🛡️ **Role-Based Access Control (RBAC):**
+  - **`admin`**: Full access to all modules, caste intelligence, exports, and data quality audits.
+  - **`operator`**: Full search, analytics, directory exports, and data quality (caste data masked).
+  - **`field_agent`**: Mobile lookup, booth browse, masked voter phone numbers (`+91 ••••• •1234`).
+- ⚡ **Sub-Second Performance & Pre-Warmed Caching:**
+  - Pre-warmed snapshot table serves unfiltered dashboard metrics in **< 10 ms**.
+- 💸 **100% Free-Tier Architecture:** Designed to run entirely on Supabase PostgreSQL free tier and Vercel Hobby with zero ongoing hosting costs.
 
 ---
 

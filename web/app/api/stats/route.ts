@@ -1,10 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireRole, isAuthError } from '@/lib/auth/roles';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = requireRole(request, 'admin', 'operator', 'field_agent');
+  if (isAuthError(auth)) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const supabase = createAdminClient();
     
@@ -24,7 +30,7 @@ export async function GET() {
     }
 
     return NextResponse.json({ count: count ?? 0 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Stats endpoint error:', err);
     return NextResponse.json({ count: 0 });
   }

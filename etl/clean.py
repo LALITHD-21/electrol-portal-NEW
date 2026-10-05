@@ -342,9 +342,49 @@ def clean_sex(raw) -> str:
     return 'M'
 
 
+QUALIFICATION_NORM = {
+    'ba': 'B.A.', 'b.a': 'B.A.', 'b. a': 'B.A.',
+    'bcom': 'B.Com', 'b.com': 'B.Com', 'b. com': 'B.Com',
+    'bsc': 'B.Sc', 'b.sc': 'B.Sc', 'b. sc': 'B.Sc',
+    'be': 'B.E. / B.Tech', 'b.e': 'B.E. / B.Tech', 'btech': 'B.E. / B.Tech', 'b.tech': 'B.E. / B.Tech',
+    'ma': 'M.A.', 'm.a': 'M.A.',
+    'msc': 'M.Sc', 'm.sc': 'M.Sc',
+    'mcom': 'M.Com', 'm.com': 'M.Com',
+    'mba': 'MBA', 'm.b.a': 'MBA',
+    'bba': 'BBA / BBM', 'bbm': 'BBA / BBM',
+    'bca': 'BCA', 'mca': 'MCA',
+    'mbbs': 'MBBS', 'llb': 'LL.B.',
+    'bed': 'B.Ed.', 'med': 'M.Ed.',
+}
+
+OCCUPATION_NORM = {
+    'private job': 'Private Sector / Corporate',
+    'private': 'Private Sector / Corporate',
+    'private employee': 'Private Sector / Corporate',
+    'teacher': 'Teacher / Educator',
+    'teachars': 'Teacher / Educator',
+    'assistant teacher': 'Teacher / Educator',
+    'housewife': 'Homemaker',
+    'house wife': 'Homemaker',
+    'home maker': 'Homemaker',
+    'agriculture': 'Agriculture / Farmer',
+    'farmer': 'Agriculture / Farmer',
+    'self employee': 'Self-Employed / Freelance',
+    'self employed': 'Self-Employed / Freelance',
+    'business': 'Business / Merchant',
+    'engineer': 'Engineer / Tech',
+    'software engineer': 'Engineer / Tech',
+    'advocate': 'Advocate / Legal',
+    'lawyer': 'Advocate / Legal',
+    'doctor': 'Doctor / Healthcare',
+    'student': 'Student',
+    'police': 'Police / Security',
+}
+
+
 def clean_qualification(raw) -> Optional[str]:
     """
-    Clean qualification: strip and collapse whitespace. Keep as free text.
+    Clean qualification: strip and normalize to canonical standard form if matched.
     """
     if raw is None:
         return None
@@ -354,14 +394,24 @@ def clean_qualification(raw) -> Optional[str]:
         return None
 
     cleaned = re.sub(r'\s+', ' ', raw_str).strip()
-    return cleaned if cleaned else None
+    normalized = QUALIFICATION_NORM.get(cleaned.lower())
+    return normalized if normalized else cleaned
 
 
 def clean_occupation(raw) -> Optional[str]:
     """
-    Clean occupation: strip and collapse whitespace. Keep as free text.
+    Clean occupation: strip and normalize to canonical standard form if matched.
     """
-    return clean_qualification(raw)
+    if raw is None:
+        return None
+
+    raw_str = str(raw).strip()
+    if raw_str.lower() in ('nan', '', 'none', 'null', 'na', 'n/a', '-', '.', '0', 'no'):
+        return None
+
+    cleaned = re.sub(r'\s+', ' ', raw_str).strip()
+    normalized = OCCUPATION_NORM.get(cleaned.lower())
+    return normalized if normalized else cleaned
 
 
 # ─── Main Cleaning Function ──────────────────────────────────────────────────

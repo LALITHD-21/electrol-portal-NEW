@@ -18,6 +18,15 @@ CREATE TABLE IF NOT EXISTS electors (
     part_number           VARCHAR(20),
     polling_station_name  TEXT,
     polling_address       TEXT,
+    whatsapp_mob          VARCHAR(15),
+    caste                 TEXT,
+    district              TEXT,
+    ac_name               TEXT,
+    taluk                 TEXT,
+    hobli                 TEXT,
+    grama_panchayath      TEXT,
+    village               TEXT,
+    area_ward             TEXT,
     photo_url             TEXT,          -- ⚠️ PENDING: leave NULL for all records
     created_at            TIMESTAMPTZ DEFAULT NOW(),
     updated_at            TIMESTAMPTZ DEFAULT NOW()

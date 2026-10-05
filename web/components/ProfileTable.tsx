@@ -10,6 +10,18 @@ interface ProfileTableProps {
   onEditRequest?: () => void;
 }
 
+/**
+ * Format phone number for display: "93794 34328"
+ */
+function formatPhoneDisplay(phone: string | null): string {
+  if (!phone) return '—';
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `${digits.slice(0, 5)} ${digits.slice(5)}`;
+  }
+  return digits || '—';
+}
+
 export default function ProfileTable({ elector, onEditRequest }: ProfileTableProps) {
   const mainRows = [
     { label: 'EPIC Number', value: elector.epic_number, formatted: formatEpicForDisplay(elector.epic_number), isMono: true },
@@ -18,9 +30,21 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
     { label: 'Relative Name', value: elector.relative_name || '—' },
     { label: 'Sex', value: elector.sex === 'M' ? 'Male (M)' : elector.sex === 'F' ? 'Female (F)' : (elector.sex || '—') },
     { label: 'Age', value: elector.age ? `${elector.age} years` : '—' },
+    { label: 'WhatsApp / Mobile', value: formatPhoneDisplay(elector.whatsapp_mob), isMono: true },
+    { label: 'Caste', value: elector.caste || '—' },
     { label: 'Address', value: elector.address || '—' },
     { label: 'Qualification', value: elector.qualification || '—' },
     { label: 'Occupation', value: elector.occupation || '—' },
+  ];
+
+  const locationRows = [
+    { label: 'District', value: elector.district || '—' },
+    { label: 'Assembly (AC)', value: elector.ac_name || '—' },
+    { label: 'Taluk', value: elector.taluk || '—' },
+    { label: 'Hobli', value: elector.hobli || '—' },
+    { label: 'Gram Panchayat', value: elector.grama_panchayath || '—' },
+    { label: 'Village', value: elector.village || '—' },
+    { label: 'Area / Ward', value: elector.area_ward || '—' },
   ];
 
   const pollingRows = [
@@ -77,6 +101,7 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
             </tr>
           </thead>
           <tbody>
+            {/* Personal Details Section */}
             {mainRows.map((row, index) => (
               <tr
                 key={index}
@@ -93,6 +118,32 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
                   }`}
                 >
                   {row.formatted || row.value}
+                </td>
+              </tr>
+            ))}
+
+            {/* Constituency & Location Header Row */}
+            <tr className="bg-gradient-to-r from-sky-50 via-blue-50 to-slate-50 border-y border-slate-200/80">
+              <td
+                colSpan={2}
+                className="py-3 px-4 sm:px-6 text-xs font-extrabold uppercase tracking-wider text-sky-700"
+              >
+                Constituency & Location Details
+              </td>
+            </tr>
+
+            {locationRows.map((row, index) => (
+              <tr
+                key={`loc-${index}`}
+                className={`border-b border-slate-100 transition-colors ${
+                  index % 2 === 0 ? 'bg-white hover:bg-sky-50/20' : 'bg-slate-50/40 hover:bg-sky-50/20'
+                }`}
+              >
+                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-500 align-top">
+                  {row.label}
+                </td>
+                <td className="py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed">
+                  {row.value}
                 </td>
               </tr>
             ))}

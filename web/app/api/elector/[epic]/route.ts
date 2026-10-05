@@ -1,11 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { Elector } from '@/lib/types';
+import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { epic: string } }
 ) {
+  const auth = requireRole(request, 'admin', 'operator', 'field_agent');
+  if (isAuthError(auth)) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const rawEpic = params.epic || '';
   const epic = rawEpic.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
@@ -40,24 +46,38 @@ export async function GET(
       return NextResponse.json(null, { status: 404 });
     }
 
-    return NextResponse.json(data as Elector, {
+    const electorRecord = { ...(data as Elector) };
+    if (auth.session.role === 'field_agent') {
+      electorRecord.whatsapp_mob = maskMobile(electorRecord.whatsapp_mob, 'field_agent');
+      electorRecord.caste = null;
+    } else if (auth.session.role !== 'admin') {
+      electorRecord.caste = null;
+    }
+
+    return NextResponse.json(electorRecord, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Server error connecting to Supabase database.';
     console.error('API route exception:', err);
     return NextResponse.json(
-      { error: err?.message || 'Server error connecting to Supabase database.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { epic: string } }
 ) {
+  const auth = requireRole(request, 'admin', 'operator');
+  if (isAuthError(auth)) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const rawEpic = params.epic || '';
   const epic = rawEpic.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
@@ -80,26 +100,35 @@ export async function PATCH(
       'occupation',
       'age',
       'sex',
+      'whatsapp_mob',
+      'caste',
+      'district',
+      'ac_name',
+      'taluk',
+      'hobli',
+      'grama_panchayath',
+      'village',
+      'area_ward',
       'part_number',
       'polling_station_name',
       'polling_address',
       'serial_number',
     ];
 
-    const updatePayload: Record<string, any> = {
+    const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 
     for (const field of allowedFields) {
       if (field in body) {
         if (field === 'age' || field === 'serial_number') {
-          const val = body[field];
+          const val = (body as Record<string, unknown>)[field];
           updatePayload[field] = val === '' || val === null ? null : Number(val);
         } else if (field === 'sex') {
-          const val = body[field];
+          const val = (body as Record<string, unknown>)[field];
           updatePayload[field] = val === 'M' || val === 'F' ? val : null;
         } else {
-          const val = body[field];
+          const val = (body as Record<string, unknown>)[field];
           updatePayload[field] = typeof val === 'string' ? val.trim() || null : val;
         }
       }
@@ -123,10 +152,11 @@ export async function PATCH(
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Server error updating record.';
     console.error('PATCH route exception:', err);
     return NextResponse.json(
-      { error: err?.message || 'Server error updating record.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -8,7 +8,7 @@ import { Lock, User, Loader2, AlertCircle, Eye, EyeOff, KeyRound } from 'lucide-
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get('redirect') || '/dashboard';
+  const redirectPath = searchParams.get('redirect') || '/search';
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');

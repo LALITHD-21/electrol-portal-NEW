@@ -68,16 +68,30 @@ export default function ProfileDisplay({
   const handleCopyDetails = () => {
     if (!currentElector) return;
 
+    const phoneDigits = currentElector.whatsapp_mob ? String(currentElector.whatsapp_mob).replace(/\D/g, '') : null;
+    const phoneDisplay = phoneDigits && phoneDigits.length === 10
+      ? `${phoneDigits.slice(0, 5)} ${phoneDigits.slice(5)}`
+      : phoneDigits;
+
     const summary = [
       `--- ELECTOR DETAILS SLIP ---`,
       `EPIC Number: ${formatEpicForDisplay(currentElector.epic_number)}`,
       `Name: ${currentElector.name}`,
-      currentElector.relative_name ? `Relative: ${currentElector.relative_name}` : null,
+      currentElector.relative_name ? `Father / Husband: ${currentElector.relative_name}` : null,
       currentElector.age ? `Age: ${currentElector.age}` : null,
-      currentElector.sex ? `Sex: ${currentElector.sex}` : null,
+      currentElector.sex ? `Sex: ${currentElector.sex === 'M' ? 'Male' : currentElector.sex === 'F' ? 'Female' : currentElector.sex}` : null,
+      phoneDisplay ? `WhatsApp / Mobile: ${phoneDisplay}` : null,
+      currentElector.caste ? `Caste: ${currentElector.caste}` : null,
       currentElector.address ? `Address: ${currentElector.address}` : null,
       currentElector.qualification ? `Qualification: ${currentElector.qualification}` : null,
       currentElector.occupation ? `Occupation: ${currentElector.occupation}` : null,
+      currentElector.district ? `District: ${currentElector.district}` : null,
+      currentElector.ac_name ? `Assembly: ${currentElector.ac_name}` : null,
+      currentElector.taluk ? `Taluk: ${currentElector.taluk}` : null,
+      currentElector.hobli ? `Hobli: ${currentElector.hobli}` : null,
+      currentElector.grama_panchayath ? `Gram Panchayat: ${currentElector.grama_panchayath}` : null,
+      currentElector.village ? `Village: ${currentElector.village}` : null,
+      currentElector.area_ward ? `Area / Ward: ${currentElector.area_ward}` : null,
       currentElector.serial_number ? `Serial No: ${currentElector.serial_number}` : null,
       currentElector.part_number ? `Part Number: ${currentElector.part_number}` : null,
       currentElector.polling_station_name ? `Polling Station: ${currentElector.polling_station_name}` : null,
@@ -109,7 +123,7 @@ export default function ProfileDisplay({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-1 no-print">
         {showBackToDashboard ? (
           <Link
-            href="/dashboard"
+            href="/search"
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 hover:text-indigo-600 transition active:scale-95 self-start"
           >
             <ArrowLeft className="w-4 h-4" />
