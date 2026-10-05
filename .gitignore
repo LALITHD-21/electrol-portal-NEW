@@ -5,18 +5,17 @@
 
 # --- Environment files (NEVER commit secrets) ---
 .env
+.env*
 .env.local
 etl/.env
 web/.env.local
+cookies.txt
+web/cookies.txt
 
-# --- Raw data ---
-data/
-excle-formate/
+# --- Large Scanned PDF Rolls (Kept local due to GitHub 100MB file limit) ---
 pdf-formate/
 pdf-ocr made/
-
-# --- ETL output ---
-etl/output/
+/data/
 
 # --- Python ---
 __pycache__/
@@ -29,6 +28,7 @@ venv/
 node_modules/
 .next/
 out/
+*.tsbuildinfo
 
 # --- OS ---
 .DS_Store
@@ -36,6 +36,7 @@ Thumbs.db
 Desktop.ini
 
 # --- Temp / Scratch ---
+~$*
 etl/scratch_*
 etl/*.txt
 etl/page81_*
@@ -49,10 +50,3 @@ web/*.js
 *~
 
 .vercel
-.env*
-*.xlsx
-*.xls
-*.csv
-cookies.txt
-web/cookies.txt
-*.tsbuildinfo
