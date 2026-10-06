@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import MobileSplashScreen from "@/components/MobileSplashScreen";
+import MobileZoomDisabler from "@/components/MobileZoomDisabler";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -18,6 +19,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
   themeColor: "#4f46e5",
 };
 
@@ -40,6 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
+        <MobileZoomDisabler />
         <MobileSplashScreen />
         {children}
       </body>

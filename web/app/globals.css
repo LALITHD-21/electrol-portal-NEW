@@ -24,6 +24,9 @@ html {
   /* Prevent horizontal scroll globally without breaking sticky layouts */
   overflow-x: clip;
   height: 100%;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -32,6 +35,9 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: clip;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   /* Kannada and Inter safe font fallback stack */
   font-family: var(--font-sans), 'Inter', 'Noto Sans Kannada', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   text-rendering: optimizeLegibility;
@@ -41,14 +47,17 @@ body {
 button,
 [role="button"],
 a,
+input,
+select,
+textarea,
 input[type="button"],
 input[type="submit"] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Crucial: Prevent iOS Safari auto-zoom on input focus by keeping font size >= 16px on mobile */
-@media screen and (max-width: 640px) {
+/* Crucial: Prevent iOS Safari auto-zoom on input focus by keeping font size >= 16px on mobile (< 768px) */
+@media screen and (max-width: 768px) {
   input,
   select,
   textarea {
