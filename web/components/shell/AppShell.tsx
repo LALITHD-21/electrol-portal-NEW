@@ -335,29 +335,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </BottomSheet>
 
-      {/* Unified Executive Footer (desktop, tablet & mobile) */}
-      <footer className="relative border-t border-slate-800 bg-slate-900 text-slate-400 pt-4 pb-[calc(84px+env(safe-area-inset-bottom,0px))] md:py-3.5 text-[11px] overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          {/* Main Info */}
-          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 font-medium text-slate-400">
-            <div className="flex items-center gap-1.5">
-              <span className="text-white font-bold tracking-tight">
-                ELECTORAL-<span className="text-brand-400">LOOKUP</span>
-              </span>
-            </div>
-            <span className="hidden sm:inline text-slate-600">•</span>
-            <span className="text-slate-300 text-[11px]">
-              South-East &amp; Central Karnataka Constituency
+      {/* Sleek Compact Footer (desktop, tablet & mobile) */}
+      <footer className="relative border-t border-slate-800 bg-slate-900 text-slate-400 pt-2.5 sm:pt-3 pb-[calc(62px+env(safe-area-inset-bottom,0px))] md:py-2.5 text-[10px] sm:text-[11px] overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-3 text-center sm:text-left">
+          {/* Main Title & Subtitle in single clean row */}
+          <div className="flex items-center gap-1.5 font-medium text-slate-400">
+            <span className="text-white font-extrabold tracking-tight text-[11px] sm:text-xs">
+              ELECTORAL-<span className="text-brand-400">LOOKUP</span>
             </span>
-            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="text-slate-600">•</span>
             <span className="text-slate-400 text-[10px] sm:text-[11px]">
-              Karnataka Legislative Council Roll
+              South-East &amp; Central Karnataka
+            </span>
+            <span className="hidden md:inline text-slate-600">•</span>
+            <span className="hidden md:inline text-slate-400 text-[10px] sm:text-[11px]">
+              Legislative Council Roll
             </span>
           </div>
 
-          {/* Copyright Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700/60 text-[10px] text-slate-300 mx-auto sm:mx-0 shadow-2xs">
-            <span>© 2026 Lalith D and Mohit J Gujjar. All Rights Reserved.</span>
+          {/* Compact Copyright Notice */}
+          <div className="text-[9.5px] sm:text-[10.5px] text-slate-400 font-medium">
+            © 2026 Lalith D and Mohit J Gujjar. All Rights Reserved.
           </div>
         </div>
       </footer>
