@@ -307,14 +307,28 @@ button:focus-visible,
   }
 }
 
-/* Print stylesheet for printable table view */
+/* Print stylesheet for printable dossier and table views */
 @media print {
   body * {
     visibility: hidden;
   }
+  .print-dossier,
+  .print-dossier *,
   .printable-table,
-  .printable-table * {
-    visibility: visible;
+  .printable-table *,
+  .printable-report,
+  .printable-report * {
+    visibility: visible !important;
+  }
+  .print-dossier {
+    position: static !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
   }
   .printable-table {
     position: absolute;
@@ -326,11 +340,37 @@ button:focus-visible,
     background: #ffffff !important;
     border-radius: 0 !important;
   }
-  table {
-    font-size: 11pt;
-    width: 100%;
+  .print-page-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    min-height: 0 !important;
   }
-  .no-print {
+  table {
+    font-size: 10pt;
+    width: 100%;
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  .no-print,
+  nav,
+  header,
+  footer,
+  aside {
     display: none !important;
+    visibility: hidden !important;
+  }
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
   }
 }

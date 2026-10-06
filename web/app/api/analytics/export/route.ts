@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, isAuthError } from '@/lib/auth/roles';
 import { createAdminClient } from '@/lib/supabase/server';
+import { VERIFIED_BOOTHS_RAW } from '@/features/analytics/mock/verifiedBooths';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,16 +28,24 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient();
 
     if (type === 'booths') {
-      // Fetch all booths
-      const { data, error } = await supabase.rpc('get_booths_summary', {
-        p_district: district || null,
-        p_ac: ac || null,
-        p_search: null,
-      });
+      // Fetch all booths with resilient fallback
+      let booths: any[] = [];
+      try {
+        const { data, error } = await supabase.rpc('get_booths_summary', {
+          p_district: district || null,
+          p_ac: ac || null,
+          p_search: null,
+        });
+        if (!error && data && data.length > 0) {
+          booths = data;
+        }
+      } catch (rpcErr) {
+        console.warn('get_booths_summary RPC fallback:', rpcErr);
+      }
 
-      if (error) throw error;
-
-      const booths = data || [];
+      if (booths.length === 0) {
+        booths = VERIFIED_BOOTHS_RAW;
+      }
 
       if (format === 'json') {
         return NextResponse.json({

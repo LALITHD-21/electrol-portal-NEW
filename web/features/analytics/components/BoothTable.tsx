@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -18,6 +18,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useBooths } from '../hooks/useBooths';
+import { BoothTableRow } from '../types';
+import { GenerateReportModal } from '@/components/reports/GenerateReportModal';
 
 interface BoothTableProps {
   districtFilter?: string;
@@ -25,6 +27,9 @@ interface BoothTableProps {
 }
 
 export function BoothTable({ districtFilter = '', acFilter = '' }: BoothTableProps) {
+  const [selectedBoothForReport, setSelectedBoothForReport] = useState<BoothTableRow | null>(null);
+  const [isAllBoothsReportOpen, setIsAllBoothsReportOpen] = useState<boolean>(false);
+
   const {
     booths,
     total,
@@ -82,15 +87,15 @@ export function BoothTable({ districtFilter = '', acFilter = '' }: BoothTablePro
             />
           </div>
 
-          <a
-            href={`/api/analytics/export?type=booths${districtFilter ? `&district=${encodeURIComponent(districtFilter)}` : ''}${acFilter ? `&ac=${encodeURIComponent(acFilter)}` : ''}`}
-            download
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border border-emerald-200 text-xs font-bold transition shadow-2xs min-h-[44px] sm:min-h-0"
-            title="Download Polling Booths Directory as CSV"
+          <button
+            type="button"
+            onClick={() => setIsAllBoothsReportOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border border-emerald-200 text-xs font-bold transition shadow-2xs min-h-[44px] sm:min-h-0 cursor-pointer"
+            title="Generate Reports / Export Directory (PDF & Excel)"
           >
             <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Export CSV</span>
-          </a>
+            <span className="hidden sm:inline">Reports &amp; Export</span>
+          </button>
 
           <div className="flex items-center gap-1 text-xs text-slate-500 flex-shrink-0">
             <select
@@ -169,14 +174,15 @@ export function BoothTable({ districtFilter = '', acFilter = '' }: BoothTablePro
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-                <Link
-                  href={`/analytics/booth/${encodeURIComponent(b.part_number)}/print`}
-                  target="_blank"
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 active:bg-slate-100 min-h-[40px]"
+                <button
+                  type="button"
+                  onClick={() => setSelectedBoothForReport(b)}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 active:bg-slate-100 min-h-[40px] cursor-pointer"
+                  title="Generate Reports (PDF / Excel)"
                 >
                   <Printer className="w-3.5 h-3.5 text-brand-600" />
                   <span>Dossier</span>
-                </Link>
+                </button>
                 <Link
                   href={`/search?part=${encodeURIComponent(b.part_number)}`}
                   className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-brand-700 bg-brand-50 border border-brand-200 active:bg-brand-100 min-h-[40px]"
@@ -300,15 +306,15 @@ export function BoothTable({ districtFilter = '', acFilter = '' }: BoothTablePro
 
                   <td className="py-3 px-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <Link
-                        href={`/analytics/booth/${encodeURIComponent(b.part_number)}/print`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-2 py-1 rounded-lg transition-all"
-                        title="Print Official Booth Dossier"
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBoothForReport(b)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-2 py-1 rounded-lg transition-all cursor-pointer"
+                        title="Generate Reports (PDF / Excel)"
                       >
                         <Printer className="w-3 h-3 text-brand-600" />
                         <span className="hidden sm:inline">Dossier</span>
-                      </Link>
+                      </button>
                       <Link
                         href={`/search?part=${encodeURIComponent(b.part_number)}`}
                         className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2.5 py-1 rounded-lg transition-all"
@@ -361,6 +367,26 @@ export function BoothTable({ districtFilter = '', acFilter = '' }: BoothTablePro
           </button>
         </div>
       </div>
+
+      {/* Generate Reports Modal for Selected Polling Booth */}
+      {selectedBoothForReport && (
+        <GenerateReportModal
+          isOpen={!!selectedBoothForReport}
+          onClose={() => setSelectedBoothForReport(null)}
+          booth={selectedBoothForReport}
+        />
+      )}
+
+      {/* Generate Reports Modal for Full Operations Directory */}
+      {isAllBoothsReportOpen && (
+        <GenerateReportModal
+          isOpen={isAllBoothsReportOpen}
+          onClose={() => setIsAllBoothsReportOpen(false)}
+          isAllBooths={true}
+          allBooths={booths}
+          totalElectors={total}
+        />
+      )}
     </div>
   );
 }
