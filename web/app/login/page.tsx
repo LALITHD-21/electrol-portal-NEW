@@ -118,6 +118,7 @@ function LoginForm() {
                 alt="ELECTORAL-LOOKUP Emblem"
                 fill
                 priority
+                unoptimized
                 sizes="96px"
                 className="object-contain relative z-10 drop-shadow-sm"
               />

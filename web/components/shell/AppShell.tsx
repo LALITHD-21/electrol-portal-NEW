@@ -73,12 +73,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 {/* Mobile View: High-res Circular App Logo + Clean Title */}
                 <div className="flex sm:hidden items-center gap-2 flex-shrink-0">
-                  <div className="relative w-8 h-8 flex-shrink-0">
+                  <div className="relative w-9 h-9 flex-shrink-0 drop-shadow-xs">
                     <Image
                       src="/app-logo.png"
                       alt="ELECTORAL-LOOKUP"
                       fill
                       priority
+                      unoptimized
                       className="object-contain"
                     />
                   </div>
@@ -92,16 +93,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
 
-                {/* Tablet / Desktop View: Full horizontal branding banner */}
-                <div className="hidden sm:flex relative sm:h-16 md:h-18 lg:h-20 sm:w-80 md:w-96 lg:w-[480px] items-center">
-                  <Image
-                    src="/logo-horizontal.png"
-                    alt="ELECTORAL-LOOKUP OF South-East & Central Karnataka Constituency"
-                    fill
-                    priority
-                    sizes="(max-width: 1024px) 380px, 480px"
-                    className="object-contain object-left drop-shadow-2xs group-hover:drop-shadow-xs transition-all"
-                  />
+                {/* Tablet / Desktop View: High-res Circular App Logo + Official Title */}
+                <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+                  <div className="relative w-12 h-12 md:w-14 md:h-14 flex-shrink-0 drop-shadow-sm">
+                    <Image
+                      src="/app-logo.png"
+                      alt="ELECTORAL-LOOKUP Emblem"
+                      fill
+                      priority
+                      unoptimized
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center leading-tight">
+                    <span className="text-sm md:text-base font-black tracking-tight text-slate-900 leading-tight whitespace-nowrap">
+                      ELECTORAL-<span className="text-brand-600">LOOKUP</span>
+                    </span>
+                    <span className="text-[10px] md:text-[11px] font-bold text-slate-500 tracking-wide mt-0.5 whitespace-nowrap">
+                      South-East &amp; Central Karnataka Constituency
+                    </span>
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 whitespace-nowrap">
+                      Karnataka Legislative Council Roll
+                    </span>
+                  </div>
                 </div>
               </Link>
 
@@ -241,6 +255,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 src="/app-logo.png"
                 alt="App Logo"
                 fill
+                unoptimized
                 className="object-contain"
               />
             </div>
