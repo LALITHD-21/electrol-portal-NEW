@@ -341,7 +341,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {/* Main Info */}
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 font-medium text-slate-400">
             <div className="flex items-center gap-1.5">
-              <span>© 2026</span>
               <span className="text-white font-bold tracking-tight">
                 ELECTORAL-<span className="text-brand-400">LOOKUP</span>
               </span>
@@ -356,10 +355,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          {/* High-Speed Tech Badge */}
+          {/* Copyright Badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700/60 text-[10px] text-slate-300 mx-auto sm:mx-0 shadow-2xs">
-            <Sparkles className="w-3 h-3 text-brand-400 flex-shrink-0" />
-            <span>High-Speed PostgreSQL Trigram Search &amp; Real-Time Analytics</span>
+            <span>© 2026 Lalith D and Mohit J Gujjar. All Rights Reserved.</span>
           </div>
         </div>
       </footer>

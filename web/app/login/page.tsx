@@ -482,7 +482,8 @@ export default function LoginPage() {
       <footer className="relative z-10 w-full border-t border-slate-200/80 bg-white/70 backdrop-blur-md px-4 py-3 text-[11px] text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-            <span>© 2026</span>
+            <span>© 2026 Lalith D and Mohit J Gujjar. All Rights Reserved.</span>
+            <span className="hidden sm:inline text-slate-300">•</span>
             <span className="font-bold text-slate-700">
               ELECTORAL-LOOKUP OF South-East &amp; Central Karnataka Constituency
             </span>
