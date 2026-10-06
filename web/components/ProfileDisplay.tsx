@@ -10,6 +10,7 @@ import ProfileTable from './ProfileTable';
 import SearchBar from './SearchBar';
 import EmptyState from './EmptyState';
 import EditElectorModal from './EditElectorModal';
+import { SpecularButton } from '@/components/ui/SpecularButton';
 import { ArrowLeft, Copy, Check, Loader2, Sparkles, Printer, Edit3 } from 'lucide-react';
 import { getElectorByEpic, primeElectorCache } from '@/lib/electorService';
 import { formatEpicForDisplay } from '@/lib/utils';
@@ -183,14 +184,26 @@ export default function ProfileDisplay({
 
                 <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto">
                   {/* Edit Record Action Button */}
-                  <button
+                  <SpecularButton
                     type="button"
                     onClick={() => setIsEditModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm transition active:scale-95"
+                    size="sm"
+                    variant="primary"
+                    tint="#4f46e5"
+                    tintOpacity={1}
+                    lineColor="#c7d2fe"
+                    baseColor="#3730a3"
+                    textColor="#ffffff"
+                    intensity={1.1}
+                    radius={12}
+                    speed={0.35}
+                    autoAnimate={true}
+                    followMouse={true}
+                    leftIcon={<Edit3 className="w-3.5 h-3.5 text-indigo-200" />}
+                    className="shadow-sm active:scale-95"
                   >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit Record</span>
-                  </button>
+                    Edit Record
+                  </SpecularButton>
 
                   {/* View Mode Toggle */}
                   <ViewToggle view={view} onChange={setView} />

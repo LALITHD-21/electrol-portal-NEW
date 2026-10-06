@@ -27,6 +27,7 @@ import {
   Layers
 } from 'lucide-react';
 import { formatEpicForDisplay } from '@/lib/utils';
+import { SpecularButton } from '@/components/ui/SpecularButton';
 
 interface EditElectorModalProps {
   isOpen: boolean;
@@ -590,23 +591,28 @@ export default function EditElectorModal({
               Cancel
             </button>
 
-            <button
+            <SpecularButton
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-brand-600 via-indigo-600 to-violet-700 hover:from-brand-700 hover:to-violet-800 shadow-md shadow-brand-500/20 transition active:scale-95 disabled:opacity-50 min-h-[44px]"
+              size="md"
+              variant="primary"
+              tint="#4338ca"
+              tintOpacity={1}
+              lineColor="#a5b4fc"
+              baseColor="#312e81"
+              textColor="#ffffff"
+              intensity={1.15}
+              radius={14}
+              speed={0.35}
+              autoAnimate={true}
+              followMouse={true}
+              isLoading={isSaving}
+              loadingText="Saving Changes..."
+              leftIcon={<Save className="w-4 h-4 text-indigo-200" />}
+              className="shadow-md shadow-indigo-950/20 active:scale-95 min-h-[44px]"
             >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Saving Changes...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Save Changes</span>
-                </>
-              )}
-            </button>
+              Save Changes
+            </SpecularButton>
           </div>
         </form>
       </div>

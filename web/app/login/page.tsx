@@ -19,7 +19,7 @@ import {
   X,
   Info,
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button, SpecularButton } from '@/components/ui/Button';
 
 function LoginForm() {
   const router = useRouter();
@@ -276,18 +276,29 @@ function LoginForm() {
 
             {/* Submit Action */}
             <div className="pt-2">
-              <Button
+              <SpecularButton
                 type="submit"
-                variant="primary"
                 size="lg"
+                variant="primary"
+                tint="#4338ca"
+                tintOpacity={1}
+                lineColor="#a5b4fc"
+                baseColor="#312e81"
+                textColor="#ffffff"
+                intensity={1.2}
+                radius={16}
+                speed={0.4}
+                autoAnimate={true}
+                followMouse={true}
+                proximity={300}
                 fullWidth
                 isLoading={isLoading}
                 loadingText="Authenticating Session..."
-                leftIcon={<KeyRound className="w-4 h-4" />}
-                className="h-12 min-h-[48px] rounded-2xl font-extrabold text-sm sm:text-base bg-gradient-to-r from-brand-600 via-indigo-600 to-violet-700 shadow-md shadow-brand-500/20 active:scale-[0.98]"
+                leftIcon={<KeyRound className="w-4 h-4 text-indigo-200" />}
+                className="h-12 min-h-[48px] rounded-2xl font-extrabold text-sm sm:text-base shadow-lg shadow-indigo-950/20 active:scale-[0.98]"
               >
                 Sign In to System
-              </Button>
+              </SpecularButton>
             </div>
           </form>
 

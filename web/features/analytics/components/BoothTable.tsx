@@ -20,6 +20,7 @@ import {
 import { useBooths } from '../hooks/useBooths';
 import { BoothTableRow } from '../types';
 import { GenerateReportModal } from '@/components/reports/GenerateReportModal';
+import { SpecularButton } from '@/components/ui/SpecularButton';
 
 interface BoothTableProps {
   districtFilter?: string;
@@ -87,15 +88,26 @@ export function BoothTable({ districtFilter = '', acFilter = '' }: BoothTablePro
             />
           </div>
 
-          <button
+          <SpecularButton
             type="button"
             onClick={() => setIsAllBoothsReportOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border border-emerald-200 text-xs font-bold transition shadow-2xs min-h-[44px] sm:min-h-0 cursor-pointer"
+            size="sm"
+            variant="emerald"
+            tint="#065f46"
+            tintOpacity={0.95}
+            lineColor="#6ee7b7"
+            baseColor="#064e3b"
+            textColor="#ffffff"
+            intensity={1.1}
+            radius={12}
+            autoAnimate={true}
+            followMouse={true}
+            leftIcon={<Download className="w-3.5 h-3.5 text-emerald-200" />}
+            className="shadow-xs cursor-pointer min-h-[44px] sm:min-h-0"
             title="Generate Reports / Export Directory (PDF & Excel)"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reports &amp; Export</span>
-          </button>
+            <span>Reports &amp; Export</span>
+          </SpecularButton>
 
           <div className="flex items-center gap-1 text-xs text-slate-500 flex-shrink-0">
             <select

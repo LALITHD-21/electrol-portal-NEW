@@ -3,15 +3,22 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { SpecularButton, SpecularButtonProps } from './SpecularButton';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline' | 'specular';
   size?: 'sm' | 'md' | 'lg' | 'icon';
   fullWidth?: boolean;
   isLoading?: boolean;
   loadingText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  specular?: boolean;
+  lineColor?: string;
+  baseColor?: string;
+  intensity?: number;
+  autoAnimate?: boolean;
+  radius?: number;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -27,10 +34,50 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       rightIcon,
       children,
       disabled,
+      specular,
+      lineColor,
+      baseColor,
+      intensity,
+      autoAnimate,
+      radius,
       ...props
     },
     ref
   ) => {
+    // If specular is explicitly enabled, or variant is 'specular', or primary variant (when not explicitly disabled and not icon size)
+    const useSpecular =
+      specular === true ||
+      variant === 'specular' ||
+      (variant === 'primary' && specular !== false && size !== 'icon');
+
+    if (useSpecular) {
+      const specularSize: 'sm' | 'md' | 'lg' = size === 'icon' ? 'sm' : size;
+      const specularVariant = variant === 'primary' ? 'primary' : 'default';
+
+      return (
+        <SpecularButton
+          ref={ref}
+          variant={specularVariant}
+          size={specularSize}
+          radius={radius}
+          lineColor={lineColor}
+          baseColor={baseColor}
+          intensity={intensity}
+          autoAnimate={autoAnimate}
+          isLoading={isLoading}
+          loadingText={loadingText}
+          leftIcon={leftIcon}
+          rightIcon={rightIcon}
+          fullWidth={fullWidth}
+          disabled={disabled}
+          className={cn(className)}
+          {...props}
+        >
+          {children}
+        </SpecularButton>
+      );
+    }
+
     const variantStyles = {
       primary:
         'bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-500 border border-transparent',
@@ -42,6 +89,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/60 focus-visible:ring-slate-400 border border-transparent',
       destructive:
         'bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:bg-rose-800 focus-visible:ring-rose-500 border border-transparent',
+      specular:
+        'bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-500 border border-transparent',
     };
 
     // Standardized sizes with min 44px touch targets on mobile (md and lg)
@@ -86,3 +135,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
+
+export { SpecularButton };
+export type { SpecularButtonProps };
+export default Button;

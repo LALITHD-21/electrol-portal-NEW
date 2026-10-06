@@ -17,6 +17,7 @@ import {
 import { DashboardStatsResponse, BoothTableRow } from '@/features/analytics/types';
 import { VERIFIED_BOOTHS_RAW } from '@/features/analytics/mock/verifiedBooths';
 import { exportSingleBoothToExcel } from '@/lib/exportExcel';
+import { SpecularButton } from '@/components/ui/SpecularButton';
 
 export default function BoothPrintDossier() {
   const params = useParams();
@@ -227,26 +228,48 @@ export default function BoothPrintDossier() {
 
         <div className="flex items-center gap-2">
           {/* Excel Export Button */}
-          <button
+          <SpecularButton
             type="button"
             onClick={handleExportExcelClick}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold shadow-xs transition active:scale-95"
+            size="sm"
+            variant="emerald"
+            tint="#065f46"
+            tintOpacity={0.95}
+            lineColor="#6ee7b7"
+            baseColor="#064e3b"
+            textColor="#ffffff"
+            intensity={1.1}
+            radius={12}
+            autoAnimate={true}
+            followMouse={true}
+            leftIcon={<Table className="w-4 h-4 text-emerald-200" />}
+            className="shadow-xs active:scale-95"
             title="Download formatted Excel spreadsheet for this booth"
           >
-            <Table className="w-4 h-4 text-emerald-700" />
-            <span>Export Excel (.xlsx)</span>
-          </button>
+            Export Excel (.xlsx)
+          </SpecularButton>
 
           {/* Print A4 / Save as PDF Button */}
-          <button
+          <SpecularButton
             type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-[#4a004f] via-[#5c0b62] to-[#730d7b] hover:from-[#3d0041] hover:to-[#630b6b] text-white text-xs font-bold shadow-md transition active:scale-95"
+            size="sm"
+            variant="plum"
+            tint="#4a004f"
+            tintOpacity={1}
+            lineColor="#f0abfc"
+            baseColor="#3b0764"
+            textColor="#ffffff"
+            intensity={1.15}
+            radius={12}
+            autoAnimate={true}
+            followMouse={true}
+            leftIcon={<Printer className="w-4 h-4 text-purple-200" />}
+            className="shadow-md shadow-purple-950/20 active:scale-95"
             title="Print or Save as PDF"
           >
-            <Printer className="w-4 h-4" />
-            <span>Print Official Dossier (A4 / PDF)</span>
-          </button>
+            Print Official Dossier (A4 / PDF)
+          </SpecularButton>
         </div>
       </div>
 

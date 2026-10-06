@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, FileText, Table, Check, ChevronDown } from 'lucide-react';
 import { BoothTableRow } from '@/features/analytics/types';
 import { exportSingleBoothToExcel, exportAllBoothsToExcel } from '@/lib/exportExcel';
+import { SpecularButton } from '@/components/ui/SpecularButton';
 
 export interface GenerateReportModalProps {
   isOpen: boolean;
@@ -240,34 +241,59 @@ export function GenerateReportModal({
         {/* TWO PRIMARY ACTION BUTTONS: PDF Report | Excel Export */}
         <div className="grid grid-cols-2 gap-3 pt-1">
           {/* PDF Report Button (Rich Plum / Brand Gradient) */}
-          <button
+          <SpecularButton
             type="button"
             onClick={handleGeneratePdf}
-            className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl text-sm font-extrabold text-white bg-gradient-to-r from-[#4a004f] via-[#5c0b62] to-[#730d7b] hover:from-[#3d0041] hover:to-[#630b6b] active:scale-[0.98] shadow-md shadow-purple-950/10 transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-200"
+            size="md"
+            variant="plum"
+            tint="#4a004f"
+            tintOpacity={1}
+            lineColor="#f0abfc"
+            baseColor="#3b0764"
+            textColor="#ffffff"
+            intensity={1.15}
+            radius={16}
+            speed={0.4}
+            autoAnimate={true}
+            followMouse={true}
+            proximity={250}
+            fullWidth
+            leftIcon={<FileText className="w-4 h-4 text-purple-200 flex-shrink-0" />}
+            className="shadow-md shadow-purple-950/20 active:scale-[0.98]"
           >
-            <FileText className="w-4 h-4 text-white/90 flex-shrink-0" />
-            <span>PDF Report</span>
-          </button>
+            PDF Report
+          </SpecularButton>
 
-          {/* Excel Export Button (Clean White + Emerald Accent) */}
-          <button
+          {/* Excel Export Button (Clean Emerald Specular) */}
+          <SpecularButton
             type="button"
             onClick={handleExportExcel}
             disabled={isExportingExcel}
-            className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl text-sm font-extrabold text-emerald-800 bg-emerald-50/60 hover:bg-emerald-100/80 active:scale-[0.98] border border-emerald-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+            size="md"
+            variant="emerald"
+            tint="#065f46"
+            tintOpacity={1}
+            lineColor="#6ee7b7"
+            baseColor="#064e3b"
+            textColor="#ffffff"
+            intensity={1.15}
+            radius={16}
+            speed={0.4}
+            autoAnimate={true}
+            followMouse={true}
+            proximity={250}
+            fullWidth
+            leftIcon={
+              excelSuccess ? (
+                <Check className="w-4 h-4 text-emerald-200 animate-scaleIn flex-shrink-0" />
+              ) : (
+                <Table className="w-4 h-4 text-emerald-200 flex-shrink-0" />
+              )
+            }
+            className="shadow-md shadow-emerald-950/20 active:scale-[0.98]"
           >
-            {excelSuccess ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-700 animate-scaleIn" />
-                <span>Exported!</span>
-              </>
-            ) : (
-              <>
-                <Table className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-                <span>{isExportingExcel ? 'Exporting...' : 'Excel Export'}</span>
-              </>
-            )}
-          </button>
+            {excelSuccess ? 'Exported!' : isExportingExcel ? 'Exporting...' : 'Excel Export'}
+          </SpecularButton>
         </div>
       </div>
     </div>
