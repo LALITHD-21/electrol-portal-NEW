@@ -73,17 +73,17 @@ export default function LiveRecordBadge() {
     <div
       onClick={() => fetchLiveCount(true)}
       title="Click to refresh live record count from database"
-      className="inline-flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-white/95 border border-slate-200/90 shadow-2xs hover:border-brand-300 hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-fadeIn flex-shrink-0 select-none"
+      className="inline-flex items-center gap-1.5 sm:gap-2.5 px-2 py-1 sm:px-3.5 sm:py-2 rounded-full bg-white/95 border border-slate-200/90 shadow-2xs hover:border-brand-300 hover:shadow-card-hover transition-all duration-300 cursor-pointer group animate-fadeIn flex-shrink-0 select-none"
     >
       {/* Dual Radar Pulsing Beacon */}
-      <div className="relative flex items-center justify-center w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0">
+      <div className="relative flex items-center justify-center w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0">
         <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-        <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500 shadow-xs" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2.5 sm:w-2.5 bg-emerald-500 shadow-xs" />
       </div>
 
       {/* Database Icon & Live Counter */}
       <div className="flex items-center gap-1 sm:gap-1.5 text-xs font-bold tracking-wide">
-        <Database className="w-3.5 h-3.5 text-brand-600 group-hover:scale-110 transition-transform flex-shrink-0" />
+        <Database className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-600 group-hover:scale-110 transition-transform flex-shrink-0" />
         <span className="epic-mono font-extrabold text-slate-900 text-xs sm:text-sm">
           {isLoading && count === null ? (
             '...'
@@ -91,14 +91,14 @@ export default function LiveRecordBadge() {
             <AnimatedNumber value={count} duration={800} />
           )}
         </span>
-        <span className="text-slate-600 font-extrabold uppercase text-[10px] sm:text-[11px] tracking-wider whitespace-nowrap">
+        <span className="hidden sm:inline text-slate-600 font-extrabold uppercase text-[10px] sm:text-[11px] tracking-wider whitespace-nowrap">
           Indexed
         </span>
       </div>
 
       {/* Manual Refresh Spinner */}
       <RefreshCw
-        className={`w-3 h-3 text-slate-400 group-hover:text-brand-600 transition flex-shrink-0 ${
+        className={`w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 group-hover:text-brand-600 transition flex-shrink-0 ${
           isRefreshing ? 'animate-spin text-brand-600' : ''
         }`}
       />

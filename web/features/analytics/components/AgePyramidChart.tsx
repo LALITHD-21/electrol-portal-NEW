@@ -108,10 +108,11 @@ export function AgePyramidChart({ brackets = [], isLoading }: AgePyramidChartPro
           <XAxis
             dataKey="name"
             stroke="#64748b"
-            fontSize={11}
+            fontSize={10}
             fontWeight={600}
             tickLine={false}
             axisLine={{ stroke: '#e2e8f0' }}
+            interval={0}
           />
           <YAxis
             stroke="#94a3b8"

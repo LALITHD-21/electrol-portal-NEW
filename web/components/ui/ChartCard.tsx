@@ -77,13 +77,13 @@ export function ChartCard({
     <section
       aria-label={ariaLabel || title}
       className={cn(
-        'card-interactive p-5 flex flex-col animate-fadeIn',
+        'card-interactive p-3.5 sm:p-5 flex flex-col animate-fadeIn',
         pulse && 'animate-ring-pulse',
         className
       )}
     >
       <header className="card-header">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           {Icon && (
             <div className={cn('icon-chip', ACCENTS[accent])}>
               <Icon className="w-4 h-4" />
@@ -94,7 +94,7 @@ export function ChartCard({
             {subtitle && <p className="card-subtitle truncate">{subtitle}</p>}
           </div>
         </div>
-        {action && <div className="flex items-center gap-2 flex-shrink-0">{action}</div>}
+        {action && <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">{action}</div>}
       </header>
 
       <div className={cn('relative w-full', bodyClassName)}>

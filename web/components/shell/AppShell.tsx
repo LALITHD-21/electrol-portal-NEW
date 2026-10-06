@@ -65,15 +65,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20 md:h-24 gap-2 sm:gap-4 py-1.5 sm:py-2">
             {/* Branding Logo Link - Responsive scale down on small screens without cut-off */}
-            <div className="flex items-center gap-2 sm:gap-6 lg:gap-8 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-6 lg:gap-8 flex-shrink-0 min-w-0">
               <Link
                 href="/search"
                 className="flex items-center group transition-all duration-200 hover:scale-[1.01] flex-shrink-0"
                 title="ELECTORAL-LOOKUP OF South-East & Central Karnataka Constituency"
               >
                 {/* Mobile View: High-res Circular App Logo + Clean Title */}
-                <div className="flex sm:hidden items-center gap-2">
-                  <div className="relative w-10 h-10 flex-shrink-0">
+                <div className="flex sm:hidden items-center gap-2 flex-shrink-0">
+                  <div className="relative w-8 h-8 flex-shrink-0">
                     <Image
                       src="/app-logo.png"
                       alt="ELECTORAL-LOOKUP"
@@ -82,11 +82,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       className="object-contain"
                     />
                   </div>
-                  <div className="flex flex-col justify-center">
-                    <span className="text-xs font-black tracking-tight text-slate-900 leading-none">
+                  <div className="flex flex-col justify-center leading-none">
+                    <span className="text-xs font-black tracking-tight text-slate-900 leading-tight whitespace-nowrap">
                       ELECTORAL-<span className="text-brand-600">LOOKUP</span>
                     </span>
-                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight mt-0.5">
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-tight mt-0.5 whitespace-nowrap">
                       Karnataka Council
                     </span>
                   </div>
@@ -166,9 +166,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => setIsMoreOpen(true)}
                 aria-label="Open App Menu"
-                className="sm:hidden p-2 text-slate-600 hover:text-slate-900 active:bg-slate-100 rounded-xl border border-slate-200/80 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+                className="sm:hidden p-1.5 text-slate-600 hover:text-slate-900 active:bg-slate-100 rounded-xl border border-slate-200/80 min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors flex-shrink-0"
               >
-                <MoreHorizontal className="w-5 h-5" />
+                <MoreHorizontal className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -179,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main Content Viewport (accounting for mobile bottom nav + safe areas) */}
-      <main className="flex-1 flex flex-col pb-[calc(72px+env(safe-area-inset-bottom,0px))] md:pb-0 min-w-0 overflow-x-clip">
+      <main className="flex-1 flex flex-col pb-6 md:pb-0 min-w-0 overflow-x-clip">
         {children}
       </main>
 
@@ -335,19 +335,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </BottomSheet>
 
-      {/* Unified Executive Footer (desktop & tablet) */}
-      <footer className="relative border-t border-slate-800 bg-slate-900 text-slate-400 py-3 text-[11px] overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-2 text-center sm:text-left">
-          <div className="flex items-center gap-1.5 font-medium text-slate-400 justify-center sm:justify-start">
-            <span>© 2026</span>
-            <span className="text-white font-bold">
-              ELECTORAL-LOOKUP OF South-East &amp; Central Karnataka Constituency
+      {/* Unified Executive Footer (desktop, tablet & mobile) */}
+      <footer className="relative border-t border-slate-800 bg-slate-900 text-slate-400 pt-4 pb-[calc(84px+env(safe-area-inset-bottom,0px))] md:py-3.5 text-[11px] overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          {/* Main Info */}
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 font-medium text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span>© 2026</span>
+              <span className="text-white font-bold tracking-tight">
+                ELECTORAL-<span className="text-brand-400">LOOKUP</span>
+              </span>
+            </div>
+            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="text-slate-300 text-[11px]">
+              South-East &amp; Central Karnataka Constituency
             </span>
-            <span className="opacity-60">• Karnataka Legislative Council Roll</span>
+            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="text-slate-400 text-[10px] sm:text-[11px]">
+              Karnataka Legislative Council Roll
+            </span>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-800/90 border border-slate-700/60 text-[10px] text-slate-400 mx-auto sm:mx-0">
-            <Sparkles className="w-3 h-3 text-brand-400" />
+          {/* High-Speed Tech Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700/60 text-[10px] text-slate-300 mx-auto sm:mx-0 shadow-2xs">
+            <Sparkles className="w-3 h-3 text-brand-400 flex-shrink-0" />
             <span>High-Speed PostgreSQL Trigram Search &amp; Real-Time Analytics</span>
           </div>
         </div>

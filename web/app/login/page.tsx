@@ -479,15 +479,15 @@ export default function LoginPage() {
       </main>
 
       {/* Official Bottom System Bar */}
-      <footer className="relative z-10 w-full border-t border-slate-200/80 bg-white/70 backdrop-blur-md px-4 py-2.5 text-[11px] text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 text-center sm:text-left">
-          <div className="flex items-center gap-2 mx-auto sm:mx-0">
+      <footer className="relative z-10 w-full border-t border-slate-200/80 bg-white/70 backdrop-blur-md px-4 py-3 text-[11px] text-slate-500">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
             <span>© 2026</span>
             <span className="font-bold text-slate-700">
               ELECTORAL-LOOKUP OF South-East &amp; Central Karnataka Constituency
             </span>
           </div>
-          <div className="flex items-center gap-3 mx-auto sm:mx-0 text-slate-400">
+          <div className="flex items-center gap-2 text-slate-400 text-[10px] sm:text-[11px]">
             <span>Authorized Election Personnel Gateway</span>
             <span>•</span>
             <span>RLS Protocol Active</span>
