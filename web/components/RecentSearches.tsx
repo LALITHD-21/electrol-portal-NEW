@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { SearchHistoryItem, getSearchHistory, clearSearchHistory } from '@/lib/searchHistory';
 import { History, Trash2, ArrowUpRight, Clock } from 'lucide-react';
 import { formatEpicForDisplay } from '@/lib/utils';
+import { AnimatedItem } from '@/components/ui/AnimatedList';
 
 interface RecentSearchesProps {
   onSelectEpic: (epic: string) => void;
@@ -45,26 +46,32 @@ export default function RecentSearches({ onSelectEpic, refreshTrigger = 0 }: Rec
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {history.map((item) => {
+        {history.map((item, idx) => {
           const epic = item.epic || item.query;
           const name = item.name || item.label;
           return (
-            <button
+            <AnimatedItem
               key={`${epic}-${item.timestamp}`}
-              type="button"
-              onClick={() => onSelectEpic(epic)}
-              className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 shadow-xs text-xs font-semibold transition-all duration-200 active:scale-95"
+              index={idx}
+              delay={Math.min(idx * 0.03, 0.12)}
+              threshold={0.1}
             >
-              <span className="epic-mono font-extrabold text-slate-900 group-hover:text-indigo-700">
-                {formatEpicForDisplay(epic)}
-              </span>
-              {name && (
-                <span className="text-slate-500 font-medium truncate max-w-[120px]">
-                  • {name}
+              <button
+                type="button"
+                onClick={() => onSelectEpic(epic)}
+                className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 shadow-xs text-xs font-semibold transition-all duration-200 active:scale-95"
+              >
+                <span className="epic-mono font-extrabold text-slate-900 group-hover:text-indigo-700">
+                  {formatEpicForDisplay(epic)}
                 </span>
-              )}
-              <ArrowUpRight className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </button>
+                {name && (
+                  <span className="text-slate-500 font-medium truncate max-w-[120px]">
+                    • {name}
+                  </span>
+                )}
+                <ArrowUpRight className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </button>
+            </AnimatedItem>
           );
         })}
       </div>

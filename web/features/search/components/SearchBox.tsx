@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { normalizeEpic, isValidEpic } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
+import { AnimatedList } from '@/components/ui/AnimatedList';
 import {
   getSearchHistory,
   clearSearchHistory,
@@ -143,24 +144,37 @@ export function SearchBox({
                 Clear
               </button>
             </div>
-            <div className="max-h-56 overflow-y-auto divide-y divide-slate-50 py-1">
-              {historyItems.map((item, idx) => (
-                <button
-                  key={idx}
-                  type="button"
+            <AnimatedList
+              items={historyItems}
+              maxHeight="220px"
+              showGradients={true}
+              gradientVariant="light"
+              enableArrowNavigation={true}
+              className="w-full max-w-none p-0"
+              onItemSelect={(item) => {
+                if (onSelectRecent) onSelectRecent(item);
+                setShowHistory(false);
+              }}
+              renderItem={(item, idx, isSelected) => (
+                <div
                   onMouseDown={() => {
                     if (onSelectRecent) onSelectRecent(item);
                     setShowHistory(false);
                   }}
-                  className="w-full px-3 py-2 text-left flex items-center justify-between text-xs hover:bg-slate-50 active:bg-slate-100 rounded-xl transition"
+                  className={cn(
+                    'w-full px-3 py-2 text-left flex items-center justify-between text-xs rounded-xl transition cursor-pointer select-none',
+                    isSelected
+                      ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200'
+                      : 'hover:bg-slate-50 text-slate-800 border border-transparent'
+                  )}
                 >
-                  <span className="font-semibold text-slate-800 truncate">{item.query}</span>
-                  <span className="text-[10px] text-slate-400 uppercase font-mono">
+                  <span className="font-semibold truncate">{item.query}</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-mono ml-2">
                     {item.type}
                   </span>
-                </button>
-              ))}
-            </div>
+                </div>
+              )}
+            />
           </div>
         )}
       </div>

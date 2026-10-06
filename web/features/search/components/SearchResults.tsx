@@ -6,6 +6,7 @@ import { SearchRow } from './SearchRow';
 import { Pagination } from '@/components/ui/Pagination';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
+import { AnimatedItem } from '@/components/ui/AnimatedList';
 import {
   AlertCircle,
   UserX,
@@ -248,10 +249,17 @@ export function SearchResults({
         )}
       </div>
 
-      {/* Row List */}
+      {/* Row List with Scroll-triggered scale & fade animations */}
       <div className="space-y-2.5">
-        {results.map((row) => (
-          <SearchRow key={row.id} row={row} searchQuery={searchQuery} />
+        {results.map((row, idx) => (
+          <AnimatedItem
+            key={row.id}
+            index={idx}
+            delay={Math.min(idx * 0.02, 0.1)}
+            threshold={0.15}
+          >
+            <SearchRow row={row} searchQuery={searchQuery} />
+          </AnimatedItem>
         ))}
       </div>
 
