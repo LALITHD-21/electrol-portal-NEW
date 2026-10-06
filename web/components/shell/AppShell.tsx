@@ -335,28 +335,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </BottomSheet>
 
-      {/* Sleek Compact Footer (desktop, tablet & mobile) */}
-      <footer className="relative border-t border-slate-800 bg-slate-900 text-slate-400 pt-2.5 sm:pt-3 pb-[calc(62px+env(safe-area-inset-bottom,0px))] md:py-2.5 text-[10px] sm:text-[11px] overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-3 text-center sm:text-left">
-          {/* Main Title & Subtitle in single clean row */}
-          <div className="flex items-center gap-1.5 font-medium text-slate-400">
-            <span className="text-white font-extrabold tracking-tight text-[11px] sm:text-xs">
+      {/* Balanced Medium Executive Footer (desktop, tablet & mobile) */}
+      <footer className="relative border-t border-slate-800 bg-slate-900 text-slate-400 pt-3.5 sm:pt-4 pb-[calc(78px+env(safe-area-inset-bottom,0px))] md:py-3.5 text-xs overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-3 text-center sm:text-left">
+          {/* Main Title & Constituency in clean, centered row */}
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 text-[11px] sm:text-xs">
+            <span className="text-white font-extrabold tracking-tight">
               ELECTORAL-<span className="text-brand-400">LOOKUP</span>
             </span>
             <span className="text-slate-600">•</span>
-            <span className="text-slate-400 text-[10px] sm:text-[11px]">
+            <span className="text-slate-300 font-medium">
               South-East &amp; Central Karnataka
             </span>
             <span className="hidden md:inline text-slate-600">•</span>
-            <span className="hidden md:inline text-slate-400 text-[10px] sm:text-[11px]">
+            <span className="hidden md:inline text-slate-400">
               Legislative Council Roll
             </span>
           </div>
 
-          {/* Compact Copyright Notice */}
-          <div className="text-[9.5px] sm:text-[10.5px] text-slate-400 font-medium">
+          {/* Symmetrical Copyright Notice */}
+          <p className="text-[10.5px] sm:text-xs text-slate-400 font-medium tracking-wide">
             © 2026 Lalith D and Mohit J Gujjar. All Rights Reserved.
-          </div>
+          </p>
         </div>
       </footer>
     </div>
