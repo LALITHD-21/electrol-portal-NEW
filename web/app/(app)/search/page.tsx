@@ -1,10 +1,12 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useSearch } from '@/features/search/hooks/useSearch';
 import { SearchBox } from '@/features/search/components/SearchBox';
 import { SearchFilters } from '@/features/search/components/SearchFilters';
 import { SearchResults } from '@/features/search/components/SearchResults';
+import { CandidateHeroBanner } from '@/components/candidate/CandidateHeroBanner';
+import { RequestAddVoterModal } from '@/components/requests/RequestAddVoterModal';
 import { Loader2 } from 'lucide-react';
 
 function SearchPageContent() {
@@ -39,17 +41,17 @@ function SearchPageContent() {
       filters.village
   );
 
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 max-w-5xl w-full mx-auto space-y-6">
-      {/* Search Header Banner */}
-      <div className="w-full text-center space-y-2 pt-2 sm:pt-4">
-        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-          Voter Directory &amp; Profile Search
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl mx-auto">
-          Query electors across 5 districts, 30 assembly constituencies, and 147 polling booths instantly.
-        </p>
-      </div>
+    <div className="flex-1 flex flex-col items-center justify-start p-3 sm:p-6 lg:p-8 max-w-5xl w-full mx-auto space-y-5">
+      {/* Executive Candidate / Party Member Profile Banner (Light Blue Theme) */}
+      <CandidateHeroBanner
+        onRequestAddVoter={() => setIsRequestModalOpen(true)}
+        candidateName="Party Member / Candidate"
+        candidateTitle="Official Candidate • Karnataka Legislative Council"
+        constituencyName="South-East & Central Karnataka Constituency"
+      />
 
       {/* Main Search Box */}
       <div className="w-full space-y-3">
@@ -90,8 +92,15 @@ function SearchPageContent() {
           onPageChange={handlePageChange}
           onReset={handleClearAll}
           onExportCsv={exportToCsv}
+          onRequestAddVoter={() => setIsRequestModalOpen(true)}
         />
       </div>
+
+      {/* Request to Add Voter Modal */}
+      <RequestAddVoterModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+      />
     </div>
   );
 }

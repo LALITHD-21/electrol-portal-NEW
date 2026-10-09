@@ -35,6 +35,7 @@ export interface SearchResultsProps {
   onPageChange: (page: number) => void;
   onReset: () => void;
   onExportCsv?: () => void;
+  onRequestAddVoter?: () => void;
 }
 
 export function SearchResults({
@@ -53,6 +54,7 @@ export function SearchResults({
   onPageChange,
   onReset,
   onExportCsv,
+  onRequestAddVoter,
 }: SearchResultsProps) {
   const totalPages = Math.ceil(total / pageSize);
 
@@ -112,18 +114,30 @@ export function SearchResults({
   // 3. Not searched yet (initial idle state)
   if (!hasQueryOrFilter) {
     return (
-      <div className="bg-slate-50/60 rounded-3xl border border-dashed border-slate-200 p-8 sm:p-12 text-center space-y-3 max-w-md mx-auto">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-white border border-slate-200 text-indigo-600 shadow-2xs">
-          <Database className="w-6 h-6" />
+      <div className="bg-gradient-to-b from-sky-50/70 via-white to-sky-50/30 rounded-3xl border border-sky-100 p-6 sm:p-10 text-center space-y-4 max-w-lg mx-auto shadow-2xs animate-fadeIn">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-sky-100 border border-sky-200 text-sky-700 shadow-2xs">
+          <Sparkles className="w-6 h-6 text-sky-600" />
         </div>
         <div>
-          <h3 className="text-sm font-extrabold text-slate-800">
-            Search Across 223,789 Verified Voters
+          <h3 className="text-base font-black text-slate-900">
+            Electoral Roll Directory &amp; Voter Services
           </h3>
-          <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-            Enter an EPIC card number, 10-digit mobile number, or elector name to find records instantly.
+          <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">
+            Search electors by Name, 10-digit Mobile Number, or EPIC Card across Tumkur, Chitradurga, Davanagere, Kolar, and Chikkaballapura.
           </p>
         </div>
+
+        {onRequestAddVoter && (
+          <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={onRequestAddVoter}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95"
+            >
+              <span>+ Request to Add New Voter</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }

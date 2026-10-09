@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   User,
   Info,
+  ClipboardList,
 } from 'lucide-react';
 import LogoutButton from '@/components/LogoutButton';
 import LiveRecordBadge from '@/components/LiveRecordBadge';
@@ -44,6 +45,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       href: '/analytics',
       icon: BarChart3,
       isActive: pathname.startsWith('/analytics'),
+    },
+    {
+      label: 'Requests',
+      href: '/admin/requests',
+      icon: ClipboardList,
+      isActive: pathname.startsWith('/admin/requests'),
     },
   ];
 
@@ -295,6 +302,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span>Live Analytics</span>
               </div>
               <span className="text-xs text-slate-400 font-normal">Dashboard</span>
+            </Link>
+
+            <Link
+              href="/admin/requests"
+              prefetch={true}
+              onClick={() => setIsMoreOpen(false)}
+              className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardList className="w-4 h-4 text-sky-600" />
+                <span>Voter Addition Requests</span>
+              </div>
+              <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full">
+                Admin
+              </span>
             </Link>
 
             <div className="flex items-center justify-between p-3 rounded-xl text-slate-700 text-sm font-semibold">
