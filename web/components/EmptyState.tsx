@@ -14,7 +14,7 @@ export default function EmptyState({ epic }: EmptyStateProps) {
 
   return (
     <div className="w-full max-w-lg mx-auto bg-white rounded-2xl border border-gray-200/60 p-8 md:p-12 text-center shadow-soft space-y-6 animate-scaleIn">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 text-amber-500 border border-amber-100/60 shadow-sm">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 border border-blue-100/60 shadow-sm">
         <SearchX className="w-8 h-8" />
       </div>
 
@@ -37,7 +37,7 @@ export default function EmptyState({ epic }: EmptyStateProps) {
       <div className="pt-2">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30 focus:outline-none focus:ring-4 focus:ring-indigo-200 transition-all duration-200 active:scale-95"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all duration-200 active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Search</span>

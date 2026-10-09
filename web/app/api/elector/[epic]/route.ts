@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { Elector } from '@/lib/types';
 import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
+import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { epic: string } }
 ) {
-  const auth = requireRole(request, 'admin', 'operator', 'field_agent');
-  if (isAuthError(auth)) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
+  const auth = requireRole(request, 'admin', 'supervisor', 'operator', 'field_agent');
+  const isPublic = isAuthError(auth);
 
   const rawEpic = params.epic || '';
   const epic = rawEpic.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -46,8 +45,19 @@ export async function GET(
       return NextResponse.json(null, { status: 404 });
     }
 
-    const electorRecord = { ...(data as Elector) };
-    if (auth.session.role === 'field_agent') {
+    const location = resolveElectorLocation(data);
+    const serial = resolveElectorSerialNumber(data);
+    const electorRecord: Elector = {
+      ...(data as Elector),
+      serial_number: serial,
+      taluk: location.taluk,
+      district: location.district,
+      ac_name: location.ac_name,
+    };
+    if (isPublic) {
+      electorRecord.whatsapp_mob = null;
+      electorRecord.caste = null;
+    } else if (auth.session.role === 'field_agent') {
       electorRecord.whatsapp_mob = maskMobile(electorRecord.whatsapp_mob, 'field_agent');
       electorRecord.caste = null;
     } else if (auth.session.role !== 'admin') {

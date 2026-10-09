@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'indigo' | 'emerald' | 'amber' | 'rose' | 'slate' | 'outline';
+  variant?: 'default' | 'indigo' | 'emerald' | 'amber' | 'rose' | 'slate' | 'outline' | 'blue' | 'sky';
   size?: 'sm' | 'md';
 }
 
@@ -15,6 +15,8 @@ export function Badge({
 }: BadgeProps) {
   const variantStyles = {
     default: 'bg-slate-100 text-slate-700 border-slate-200',
+    blue: 'bg-blue-50 text-blue-700 border-blue-200/80',
+    sky: 'bg-sky-50 text-sky-700 border-sky-200/80',
     indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
     amber: 'bg-amber-50 text-amber-700 border-amber-200/80',

@@ -33,12 +33,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     {
       label: 'Search',
-      href: '/search',
+      href: '/analytics?tab=search',
       icon: Search,
-      isActive:
-        pathname.startsWith('/search') ||
-        pathname === '/dashboard' ||
-        pathname.startsWith('/profile'),
+      isActive: pathname === '/analytics',
     },
     {
       label: 'Analytics',
@@ -58,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setIsLoggingOut(true);
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login';
+      window.location.href = '/search';
     } catch (err) {
       console.error('Logout error:', err);
       setIsLoggingOut(false);
@@ -74,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {/* Branding Logo Link - Responsive scale down on small screens without cut-off */}
             <div className="flex items-center gap-2 sm:gap-6 lg:gap-8 flex-shrink-0 min-w-0">
               <Link
-                href="/search"
+                href="/admin/requests"
                 className="flex items-center group transition-all duration-200 hover:scale-[1.01] flex-shrink-0"
                 title="ELECTORAL-LOOKUP OF South-East & Central Karnataka Constituency"
               >

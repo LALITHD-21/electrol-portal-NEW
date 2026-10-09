@@ -1,6 +1,7 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Sparkles,
   AlertCircle,
@@ -12,6 +13,7 @@ import {
   ShieldAlert,
   GitCompare,
   RotateCw,
+  Search,
 } from 'lucide-react';
 import { useAnalytics } from '@/features/analytics/hooks/useAnalytics';
 import { HierarchyTiles } from '@/features/analytics/components/HierarchyTiles';
@@ -25,10 +27,38 @@ import { BoothTable } from '@/features/analytics/components/BoothTable';
 import { DataQualityPanel } from '@/features/analytics/components/DataQualityPanel';
 import { CompareView } from '@/features/analytics/components/CompareView';
 import { LiveActivityStrip } from '@/features/analytics/components/LiveActivityStrip';
+import { AnalyticsVoterSearchSection } from '@/features/analytics/components/AnalyticsVoterSearchSection';
 import { normalizeOccupations } from '@/features/analytics/utils/normalizeOccupations';
 
 function AnalyticsDashboardContent() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'quality' | 'compare'>('overview');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'overview' | 'quality' | 'compare' | 'search'>(
+    tabParam === 'search' ? 'search' : tabParam === 'quality' ? 'quality' : tabParam === 'compare' ? 'compare' : 'overview'
+  );
+
+  useEffect(() => {
+    if (tabParam === 'search') {
+      setActiveTab('search');
+    } else if (tabParam === 'quality') {
+      setActiveTab('quality');
+    } else if (tabParam === 'compare') {
+      setActiveTab('compare');
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: 'overview' | 'quality' | 'compare' | 'search') => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (tab === 'overview') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', tab);
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
 
   const {
     stats,
@@ -78,10 +108,10 @@ function AnalyticsDashboardContent() {
             </div>
           </div>
 
-          {/* Module Mode Navigation Tabs (3-column grid on mobile, flex on desktop) */}
-          <div className="grid grid-cols-3 sm:flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl w-full sm:w-auto">
+          {/* Module Mode Navigation Tabs (4-column grid on mobile, flex on desktop) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 sm:flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl w-full sm:w-auto">
             <button
-              onClick={() => setActiveTab('overview')}
+              onClick={() => handleTabChange('overview')}
               className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition ${
                 activeTab === 'overview'
                   ? 'bg-white text-brand-700 shadow-2xs border border-slate-200 font-extrabold'
@@ -93,7 +123,19 @@ function AnalyticsDashboardContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab('quality')}
+              onClick={() => handleTabChange('search')}
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition ${
+                activeTab === 'search'
+                  ? 'bg-white text-brand-700 shadow-2xs border border-slate-200 font-extrabold'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Search className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>Voter Search</span>
+            </button>
+
+            <button
+              onClick={() => handleTabChange('quality')}
               className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition ${
                 activeTab === 'quality'
                   ? 'bg-white text-brand-700 shadow-2xs border border-slate-200 font-extrabold'
@@ -105,7 +147,7 @@ function AnalyticsDashboardContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab('compare')}
+              onClick={() => handleTabChange('compare')}
               className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition ${
                 activeTab === 'compare'
                   ? 'bg-white text-brand-700 shadow-2xs border border-slate-200 font-extrabold'
@@ -246,6 +288,8 @@ function AnalyticsDashboardContent() {
             />
           </>
         )}
+
+        {activeTab === 'search' && <AnalyticsVoterSearchSection />}
 
         {activeTab === 'quality' && <DataQualityPanel />}
 

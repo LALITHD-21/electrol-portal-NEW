@@ -1,23 +1,43 @@
 {
-  "name": "Elector Lookup Portal",
-  "short_name": "ElectorLookup",
-  "description": "Internal portal for secure voter profile lookup by EPIC number",
-  "start_url": "/login",
+  "name": "Electoral Lookup · South-East Graduates",
+  "short_name": "Voter Search",
+  "description": "Electoral voter profile lookup and voter slip download for Karnataka South-East Graduates Constituency",
+  "id": "/",
+  "start_url": "/search",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "theme_color": "#2563eb",
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ]
 }

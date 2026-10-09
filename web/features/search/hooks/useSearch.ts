@@ -22,6 +22,7 @@ export function useSearch() {
   const initialPart = searchParams.get('part') || '';
   const initialAc = searchParams.get('ac') || '';
   const initialDistrict = searchParams.get('district') || '';
+  const initialTaluk = searchParams.get('taluk') || '';
   const initialVillage = searchParams.get('village') || '';
   const initialFuzzy = searchParams.get('fuzzy') === 'true';
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
@@ -31,6 +32,7 @@ export function useSearch() {
     part: initialPart,
     ac: initialAc,
     district: initialDistrict,
+    taluk: initialTaluk,
     village: initialVillage,
     fuzzy: initialFuzzy,
   });
@@ -60,12 +62,20 @@ export function useSearch() {
       if (currentFilters.part) params.set('part', currentFilters.part);
       if (currentFilters.ac) params.set('ac', currentFilters.ac);
       if (currentFilters.district) params.set('district', currentFilters.district);
+      if (currentFilters.taluk) params.set('taluk', currentFilters.taluk);
       if (currentFilters.village) params.set('village', currentFilters.village);
       if (currentFilters.fuzzy) params.set('fuzzy', 'true');
       if (currentPage > 1) params.set('page', String(currentPage));
 
-      const newUrl = params.toString() ? `/search?${params.toString()}` : '/search';
-      window.history.replaceState({}, '', newUrl);
+      const isAnalytics = typeof window !== 'undefined' && window.location.pathname.startsWith('/analytics');
+      if (isAnalytics) {
+        params.set('tab', 'search');
+        const newUrl = `/analytics?${params.toString()}`;
+        window.history.replaceState({}, '', newUrl);
+      } else {
+        const newUrl = params.toString() ? `/search?${params.toString()}` : '/search';
+        window.history.replaceState({}, '', newUrl);
+      }
     },
     []
   );
@@ -86,6 +96,7 @@ export function useSearch() {
         searchFilters.part ||
           searchFilters.ac ||
           searchFilters.district ||
+          searchFilters.taluk ||
           searchFilters.village
       );
 
@@ -130,6 +141,7 @@ export function useSearch() {
         if (searchFilters.part) params.set('part', searchFilters.part);
         if (searchFilters.ac) params.set('ac', searchFilters.ac);
         if (searchFilters.district) params.set('district', searchFilters.district);
+        if (searchFilters.taluk) params.set('taluk', searchFilters.taluk);
         if (searchFilters.village) params.set('village', searchFilters.village);
         if (searchFilters.fuzzy) params.set('fuzzy', 'true');
         params.set('page', String(targetPage));
@@ -260,6 +272,7 @@ export function useSearch() {
       if (filters.part) params.set('part', filters.part);
       if (filters.ac) params.set('ac', filters.ac);
       if (filters.district) params.set('district', filters.district);
+      if (filters.taluk) params.set('taluk', filters.taluk);
       if (filters.village) params.set('village', filters.village);
       params.set('pageSize', String(pageSize));
 
@@ -294,6 +307,7 @@ export function useSearch() {
       initialPart ||
       initialAc ||
       initialDistrict ||
+      initialTaluk ||
       initialVillage ||
       initialFuzzy
     ) {
@@ -303,6 +317,7 @@ export function useSearch() {
           part: initialPart,
           ac: initialAc,
           district: initialDistrict,
+          taluk: initialTaluk,
           village: initialVillage,
           fuzzy: initialFuzzy,
         },

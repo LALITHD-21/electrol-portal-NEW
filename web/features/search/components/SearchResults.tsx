@@ -11,13 +11,10 @@ import {
   AlertCircle,
   UserX,
   Clock,
-  Database,
-  Download,
-  Loader2,
   Building2,
-  MapPin,
   Sparkles,
 } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export interface SearchResultsProps {
   results: SearchResultRow[];
@@ -28,14 +25,13 @@ export interface SearchResultsProps {
   durationMs: number | null;
   boothInfo?: BoothHeaderInfo | null;
   isLoading: boolean;
-  isExporting?: boolean;
   error: string | null;
   searchQuery: string;
   hasQueryOrFilter: boolean;
   onPageChange: (page: number) => void;
   onReset: () => void;
-  onExportCsv?: () => void;
   onRequestAddVoter?: () => void;
+  onSelectElector?: (row: SearchResultRow) => void;
 }
 
 export function SearchResults({
@@ -47,15 +43,15 @@ export function SearchResults({
   durationMs,
   boothInfo,
   isLoading,
-  isExporting = false,
   error,
   searchQuery,
   hasQueryOrFilter,
   onPageChange,
   onReset,
-  onExportCsv,
   onRequestAddVoter,
+  onSelectElector,
 }: SearchResultsProps) {
+  const { language, t } = useLanguage();
   const totalPages = Math.ceil(total / pageSize);
 
   // 1. Loading Skeleton State
@@ -66,22 +62,23 @@ export function SearchResults({
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-5 w-20" />
         </div>
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="bg-white p-5 rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs"
+              className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs"
             >
-              <div className="flex items-center justify-between gap-4">
-                <Skeleton className="h-6 w-56" />
-                <Skeleton className="h-7 w-24 rounded-lg" />
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-5 w-16 rounded-md" />
               </div>
-              <div className="flex gap-4">
-                <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3.5 w-48" />
+              <div className="flex gap-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-40" />
               </div>
-              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-3/4" />
             </div>
           ))}
         </div>
@@ -113,33 +110,7 @@ export function SearchResults({
 
   // 3. Not searched yet (initial idle state)
   if (!hasQueryOrFilter) {
-    return (
-      <div className="bg-gradient-to-b from-sky-50/70 via-white to-sky-50/30 rounded-3xl border border-sky-100 p-6 sm:p-10 text-center space-y-4 max-w-lg mx-auto shadow-2xs animate-fadeIn">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-sky-100 border border-sky-200 text-sky-700 shadow-2xs">
-          <Sparkles className="w-6 h-6 text-sky-600" />
-        </div>
-        <div>
-          <h3 className="text-base font-black text-slate-900">
-            Electoral Roll Directory &amp; Voter Services
-          </h3>
-          <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">
-            Search electors by Name, 10-digit Mobile Number, or EPIC Card across Tumkur, Chitradurga, Davanagere, Kolar, and Chikkaballapura.
-          </p>
-        </div>
-
-        {onRequestAddVoter && (
-          <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={onRequestAddVoter}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95"
-            >
-              <span>+ Request to Add New Voter</span>
-            </button>
-          </div>
-        )}
-      </div>
-    );
+    return null;
   }
 
   // 4. Empty State (Searched but 0 results)
@@ -151,23 +122,55 @@ export function SearchResults({
         </div>
         <div className="space-y-1">
           <h3 className="text-base font-extrabold text-slate-900">
-            No Voters Found
+            {t.noVotersFound}
           </h3>
           <p className="text-xs text-slate-500 font-medium leading-relaxed">
-            No voter record matches your search query{' '}
-            {searchQuery && (
-              <strong className="text-indigo-600">"{searchQuery}"</strong>
+            {language === 'kn' ? (
+              <>
+                ನೀವು ಹುಡುಕಿದ ವಿವರಗಳಿಗೆ ಯಾವುದೇ ಮತದಾರರ ವಿವರ ಹೊಂದಾಣಿಕೆಯಾಗಿಲ್ಲ{' '}
+                {searchQuery && (
+                  <strong className="text-indigo-600">&quot;{searchQuery}&quot;</strong>
+                )}
+                . ಅಕ್ಷರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಅಥವಾ ಫಿಲ್ಟರ್ ಬದಲಾಯಿಸಿ.
+              </>
+            ) : (
+              <>
+                No voter record matches your search query{' '}
+                {searchQuery && (
+                  <strong className="text-indigo-600">&quot;{searchQuery}&quot;</strong>
+                )}
+                . Check for spelling, enable <strong className="text-blue-700">Fuzzy Search</strong>, or adjust filters.
+              </>
             )}
-            . Check for spelling, enable <strong className="text-amber-700">Fuzzy Search</strong>, or adjust filters.
           </p>
         </div>
+
+        {onRequestAddVoter && (
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+            <div className="space-y-0.5">
+              <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                {t.nameNotInListTitle}
+              </h4>
+              <p className="text-[11px] text-slate-500 font-medium">
+                {t.nameNotInListDesc}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onRequestAddVoter}
+              className="px-4 py-2 rounded-xl border border-blue-600 text-blue-700 hover:bg-blue-50 font-bold text-xs transition shadow-2xs shrink-0 self-start sm:self-auto"
+            >
+              {t.requestAddBtn}
+            </button>
+          </div>
+        )}
 
         <button
           type="button"
           onClick={onReset}
           className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition active:scale-95"
         >
-          Clear Filters &amp; Retry
+          {t.clearFiltersRetry}
         </button>
       </div>
     );
@@ -176,15 +179,15 @@ export function SearchResults({
   // 5. Results List View
   return (
     <div className="space-y-4 animate-fadeIn">
-      {/* Booth Overview Banner (Shown when browsing or filtering by a specific Part) */}
+      {/* Booth Overview Banner */}
       {boothInfo && (
         <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-soft-sm border border-indigo-800/80 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px] font-extrabold uppercase tracking-widest text-indigo-300">
-              Official Polling Station Information
+              {t.boothInfoTitle}
             </span>
             <Badge variant="indigo" size="sm" className="bg-indigo-800/80 text-indigo-200 border-indigo-600/50">
-              Part {boothInfo.part_number}
+              {language === 'kn' ? `ಭಾಗ ${boothInfo.part_number}` : `Part ${boothInfo.part_number}`}
             </Badge>
           </div>
 
@@ -196,7 +199,11 @@ export function SearchResults({
 
             {boothInfo.polling_address && (
               <p className="text-xs text-slate-300 flex items-start gap-1.5 pt-0.5 leading-relaxed">
-                <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <img
+                  src="/location-pin.png"
+                  alt="Location"
+                  className="w-4 h-4 object-contain shrink-0 mt-0.5"
+                />
                 <span>{boothInfo.polling_address}</span>
               </p>
             )}
@@ -204,31 +211,31 @@ export function SearchResults({
         </div>
       )}
 
-      {/* Search Result Stats Header & CSV Export */}
+      {/* Search Result Stats Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-1 text-xs">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-extrabold text-slate-900 text-sm">
-            {total.toLocaleString()} Voters Found
+            {total.toLocaleString()} {t.votersFound}
           </span>
           {queryType === 'epic' && (
             <Badge variant="indigo" size="sm">
-              Exact EPIC Match
+              {t.exactEpicMatch}
             </Badge>
           )}
           {queryType === 'mobile' && (
             <Badge variant="emerald" size="sm">
-              Mobile Match
+              {language === 'kn' ? 'ಮೊಬೈಲ್ ಹೊಂದಾಣಿಕೆ' : 'Mobile Match'}
             </Badge>
           )}
           {queryType === 'fuzzy' && (
-            <Badge variant="amber" size="sm">
-              <Sparkles className="w-3 h-3 text-amber-600" />
-              <span>Fuzzy / Transliteration Match</span>
+            <Badge variant="blue" size="sm">
+              <Sparkles className="w-3 h-3 text-blue-600" />
+              <span>{t.fuzzyMatch}</span>
             </Badge>
           )}
           {queryType === 'booth' && (
             <Badge variant="slate" size="sm">
-              Booth Roll Sequence
+              {language === 'kn' ? 'ಮತಗಟ್ಟೆ ಪಟ್ಟಿ' : 'Booth Roll Sequence'}
             </Badge>
           )}
 
@@ -239,40 +246,23 @@ export function SearchResults({
             </span>
           )}
         </div>
-
-        {/* CSV Export Action Button */}
-        {onExportCsv && (
-          <button
-            type="button"
-            onClick={onExportCsv}
-            disabled={isExporting || total === 0}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-200/90 hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-300 shadow-2xs transition active:scale-95 disabled:opacity-50"
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-                <span>Exporting...</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-3.5 h-3.5 text-slate-500" />
-                <span>Export Page to CSV</span>
-              </>
-            )}
-          </button>
-        )}
       </div>
 
-      {/* Row List with Scroll-triggered scale & fade animations */}
-      <div className="space-y-2.5">
+      {/* 2-Column Responsive Grid Layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         {results.map((row, idx) => (
           <AnimatedItem
             key={row.id}
             index={idx}
             delay={Math.min(idx * 0.02, 0.1)}
             threshold={0.15}
+            className="h-full"
           >
-            <SearchRow row={row} searchQuery={searchQuery} />
+            <SearchRow
+              row={row}
+              searchQuery={searchQuery}
+              onSelect={onSelectElector}
+            />
           </AnimatedItem>
         ))}
       </div>

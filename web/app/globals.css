@@ -316,11 +316,20 @@ button:focus-visible,
   }
 }
 
-/* Print stylesheet for printable dossier and table views */
+/* Print stylesheet for printable dossier, table views, and voter slips */
 @media print {
+  body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   body * {
     visibility: hidden;
   }
+
+  .print-voter-slip,
+  .print-voter-slip *,
   .print-dossier,
   .print-dossier *,
   .printable-table,
@@ -328,7 +337,137 @@ button:focus-visible,
   .printable-report,
   .printable-report * {
     visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
+
+  /* When printing voter slip modal, completely hide everything outside the portal to ensure 1 single page */
+  body.voter-slip-open > *:not(#voter-slip-modal-portal) {
+    display: none !important;
+  }
+
+  body.voter-slip-open {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.voter-slip-open #voter-slip-modal-portal {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    visibility: visible !important;
+  }
+
+  body.voter-slip-open #voter-slip-modal-portal * {
+    visibility: visible !important;
+  }
+
+  body.voter-slip-open #voter-slip-modal-portal .no-print,
+  body.voter-slip-open #voter-slip-modal-portal .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  body.voter-slip-open #voter-slip-modal-portal .fixed,
+  body.voter-slip-open #voter-slip-modal-portal .z-modal {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  body.voter-slip-open #voter-slip-modal-portal .animate-scaleIn {
+    position: static !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.voter-slip-open #voter-slip-modal-portal .max-h-\[75vh\],
+  body.voter-slip-open #voter-slip-modal-portal .overflow-y-auto {
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body.voter-slip-open .print-voter-slip {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: 145mm !important;
+    max-width: 145mm !important;
+    margin: 6mm auto !important;
+    box-shadow: none !important;
+    border: 2px solid #2563eb !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Prevent modal wrappers from clipping or transforming print content */
+  .fixed,
+  [role="dialog"],
+  .z-modal,
+  .animate-scaleIn,
+  .animate-fadeIn {
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-voter-slip {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: 145mm !important;
+    max-width: 145mm !important;
+    margin: 6mm auto !important;
+    box-shadow: none !important;
+    border: 2px solid #2563eb !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-voter-slip img {
+    visibility: visible !important;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .print-dossier {
     position: static !important;
     box-shadow: none !important;
@@ -339,6 +478,7 @@ button:focus-visible,
     max-width: 100% !important;
     background: #ffffff !important;
   }
+
   .printable-table {
     position: absolute;
     left: 0;
@@ -349,27 +489,33 @@ button:focus-visible,
     background: #ffffff !important;
     border-radius: 0 !important;
   }
+
   .print-page-wrapper {
     padding: 0 !important;
     margin: 0 !important;
     background: #ffffff !important;
     min-height: 0 !important;
   }
+
   table {
     font-size: 10pt;
     width: 100%;
     page-break-inside: auto;
   }
+
   tr {
     page-break-inside: avoid;
     break-inside: avoid;
   }
+
   thead {
     display: table-header-group;
   }
+
   tfoot {
     display: table-footer-group;
   }
+
   .no-print,
   nav,
   header,
@@ -378,8 +524,9 @@ button:focus-visible,
     display: none !important;
     visibility: hidden !important;
   }
+
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 10mm;
   }
 }

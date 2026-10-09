@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import DashboardLayout from '../../dashboard/layout';
 import { createAdminClient } from '@/lib/supabase/server';
 import { Elector } from '@/lib/types';
+import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 
 interface ProfilePageProps {
   params: {
@@ -81,7 +82,15 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     if (error) {
       console.error('Supabase query error:', error);
     } else if (data) {
-      elector = data as Elector;
+      const location = resolveElectorLocation(data);
+      const serial = resolveElectorSerialNumber(data);
+      elector = {
+        ...(data as Elector),
+        serial_number: serial,
+        taluk: location.taluk,
+        district: location.district,
+        ac_name: location.ac_name,
+      };
     }
   } catch (error) {
     console.error('Failed to fetch elector profile from database:', error);

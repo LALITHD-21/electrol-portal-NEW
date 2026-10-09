@@ -15,10 +15,11 @@
 
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
+import { verifySessionSync } from '@/lib/auth/sessionCrypto';
 
 // ─── Types ──────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'operator' | 'field_agent';
+export type UserRole = 'admin' | 'supervisor' | 'operator' | 'field_agent';
 
 export interface AuthSession {
   userId: string;
@@ -46,10 +47,12 @@ export interface AuthError {
 const ROLE_LABEL_MAP: Record<string, UserRole> = {
   'system admin': 'admin',
   'admin': 'admin',
+  'supervisor': 'supervisor',
   'data operator': 'operator',
   'operator': 'operator',
   'field agent': 'field_agent',
   'field_agent': 'field_agent',
+  'worker': 'field_agent',
 };
 
 /**
@@ -100,21 +103,8 @@ export function getSessionFromCookie(
 
     if (!cookieValue) return null;
 
-    // Decode base64 using Buffer for full Node/Edge compatibility
-    const cleanCookie = decodeURIComponent(cookieValue);
-    const jsonStr = typeof Buffer !== 'undefined'
-      ? Buffer.from(cleanCookie, 'base64').toString('utf-8')
-      : atob(cleanCookie);
-
-    const decoded = JSON.parse(jsonStr) as Record<string, unknown>;
-
-    if (
-      !decoded ||
-      typeof decoded.expiresAt !== 'number' ||
-      decoded.expiresAt <= Date.now()
-    ) {
-      return null;
-    }
+    const decoded = verifySessionSync(cookieValue);
+    if (!decoded) return null;
 
     const rawRole = String(decoded.role ?? '');
     const role = normalizeRole(rawRole);
@@ -126,7 +116,7 @@ export function getSessionFromCookie(
       username: String(decoded.username ?? ''),
       email: String(decoded.email ?? ''),
       role,
-      expiresAt: decoded.expiresAt,
+      expiresAt: decoded.expiresAt as number,
     };
   } catch {
     return null;
@@ -190,7 +180,8 @@ export function requireRole(
  */
 export function hasMinRole(userRole: UserRole, minRole: UserRole): boolean {
   const hierarchy: Record<UserRole, number> = {
-    admin: 3,
+    admin: 4,
+    supervisor: 3,
     operator: 2,
     field_agent: 1,
   };

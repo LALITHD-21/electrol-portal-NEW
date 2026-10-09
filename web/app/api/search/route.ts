@@ -4,6 +4,7 @@ import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 import { searchQuerySchema } from '@/features/search/schema';
 import { SearchApiResponse, SearchResultRow, SearchQueryType } from '@/features/search/types';
 import { normalizeEpic, isValidEpic } from '@/lib/utils';
+import { resolveElectorLocation, resolveElectorSerialNumber, BOOTH_MASTER_MAP } from '@/lib/boothMaster';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,14 +36,15 @@ function checkRateLimit(key: string, limit = 60, windowMs = 60000): boolean {
 export async function GET(request: NextRequest) {
   const startTime = performance.now();
 
-  // 1. Role-based security check
-  const auth = requireRole(request, 'admin', 'operator', 'field_agent');
-  if (isAuthError(auth)) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
+  // 1. Check user authentication (Public citizens can search; staff have authenticated roles)
+  const auth = requireRole(request, 'admin', 'supervisor', 'operator', 'field_agent');
+  const isPublic = isAuthError(auth);
 
-  // 2. Rate limiting check per user
-  const rateLimitKey = auth.session.userId || auth.session.username || 'anon_search';
+  // 2. Rate limiting check per user / public IP
+  const rateLimitKey = isPublic
+    ? (request.headers.get('x-forwarded-for') || 'public_anon')
+    : (auth.session.userId || auth.session.username || 'staff_search');
+
   if (!checkRateLimit(rateLimitKey, 60, 60000)) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Please wait a few seconds before searching again.' },
@@ -64,7 +66,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { q, mobile, part, ac, district, village, fuzzy, page, pageSize } = parseResult.data;
+  const { q, mobile, part, ac, district, taluk, village, fuzzy, page, pageSize } = parseResult.data;
 
   try {
     const supabase = createAdminClient();
@@ -91,7 +93,10 @@ export async function GET(request: NextRequest) {
       village,
       part_number,
       polling_station_name,
-      address
+      address,
+      polling_address,
+      qualification,
+      occupation
     `;
 
     let query = supabase.from('electors').select(selectColumns, { count: 'exact' });
@@ -113,7 +118,7 @@ export async function GET(request: NextRequest) {
       // Match on sanitized whatsapp_mob
       query = query.ilike('whatsapp_mob', `%${phoneDigits}%`);
     }
-    // Mode C: Name text search (with optional fuzzy transliteration expansion)
+    // Mode C: Name or Location text search (with optional fuzzy transliteration expansion)
     else if (trimmedQ.length > 0) {
       queryType = fuzzy ? 'fuzzy' : 'name';
 
@@ -134,7 +139,29 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      if (canonicalTerm && canonicalTerm.toLowerCase() !== trimmedQ.toLowerCase()) {
+      // Check if user entered a known location name (AC, Taluk, Booth area, e.g. "KGF", "Robertsonpet")
+      const cleanQ = trimmedQ.replace(/[\.\s_-]/g, '').toLowerCase();
+      const matchedLocationParts = Object.entries(BOOTH_MASTER_MAP)
+        .filter(([_, info]) => {
+          const infoAc = info.ac_name.replace(/[\.\s_-]/g, '').toLowerCase();
+          const infoTaluk = info.taluk.replace(/[\.\s_-]/g, '').toLowerCase();
+          const infoDist = info.district.replace(/[\.\s_-]/g, '').toLowerCase();
+          return (
+            infoAc === cleanQ ||
+            infoTaluk === cleanQ ||
+            infoDist === cleanQ ||
+            info.ac_name.toLowerCase().includes(trimmedQ.toLowerCase()) ||
+            info.taluk.toLowerCase().includes(trimmedQ.toLowerCase())
+          );
+        })
+        .map(([p]) => p);
+
+      if (matchedLocationParts.length > 0 && trimmedQ.length <= 20) {
+        // Broaden search to include electors in this location or with this name
+        query = query.or(
+          `part_number.in.(${matchedLocationParts.join(',')}),name.ilike.%${trimmedQ}%,relative_name.ilike.%${trimmedQ}%,polling_station_name.ilike.%${trimmedQ}%,polling_address.ilike.%${trimmedQ}%,address.ilike.%${trimmedQ}%`
+        );
+      } else if (canonicalTerm && canonicalTerm.toLowerCase() !== trimmedQ.toLowerCase()) {
         query = query.or(
           `name.ilike.%${trimmedQ}%,name.ilike.%${canonicalTerm}%,relative_name.ilike.%${trimmedQ}%,relative_name.ilike.%${canonicalTerm}%`
         );
@@ -147,12 +174,61 @@ export async function GET(request: NextRequest) {
       queryType = 'booth';
     }
 
-    // Apply Filter dropdowns (District, AC, Part, Village)
+    // Apply Filter dropdowns (District, Taluk, AC, Part, Village)
     if (district) {
-      query = query.eq('district', district);
+      // Find all part numbers for this district from BOOTH_MASTER_MAP
+      const districtParts = Object.entries(BOOTH_MASTER_MAP)
+        .filter(([_, info]) => info.district.toLowerCase() === district.toLowerCase())
+        .map(([p]) => p);
+
+      if (districtParts.length > 0) {
+        query = query.in('part_number', districtParts);
+      } else {
+        query = query.eq('district', district);
+      }
     }
+
+    if (taluk) {
+      // Find all part numbers for this taluk from BOOTH_MASTER_MAP
+      const talukParts = Object.entries(BOOTH_MASTER_MAP)
+        .filter(([_, info]) =>
+          info.taluk.toLowerCase() === taluk.toLowerCase() ||
+          info.taluk.toLowerCase().includes(taluk.toLowerCase()) ||
+          taluk.toLowerCase().includes(info.taluk.toLowerCase()) ||
+          info.ac_name.toLowerCase() === taluk.toLowerCase()
+        )
+        .map(([p]) => p);
+
+      if (talukParts.length > 0) {
+        query = query.in('part_number', talukParts);
+      } else {
+        query = query.or(`taluk.ilike.%${taluk}%,polling_station_name.ilike.%${taluk}%`);
+      }
+    }
+
     if (ac) {
-      query = query.eq('ac_name', ac);
+      // Find all part numbers for this Assembly Constituency from authoritative BOOTH_MASTER_MAP
+      const cleanAc = ac.replace(/[\.\s_-]/g, '').toLowerCase();
+      const acParts = Object.entries(BOOTH_MASTER_MAP)
+        .filter(([_, info]) => {
+          const infoCleanAc = info.ac_name.replace(/[\.\s_-]/g, '').toLowerCase();
+          const infoCleanTaluk = info.taluk.replace(/[\.\s_-]/g, '').toLowerCase();
+          return (
+            infoCleanAc === cleanAc ||
+            info.ac_name.toLowerCase() === ac.toLowerCase() ||
+            infoCleanTaluk === cleanAc ||
+            info.taluk.toLowerCase() === ac.toLowerCase() ||
+            info.ac_name.toLowerCase().includes(ac.toLowerCase()) ||
+            ac.toLowerCase().includes(info.ac_name.toLowerCase())
+          );
+        })
+        .map(([p]) => p);
+
+      if (acParts.length > 0) {
+        query = query.in('part_number', acParts);
+      } else {
+        query = query.or(`ac_name.eq.${ac},ac_name.ilike.%${ac}%`);
+      }
     }
     if (part) {
       query = query.eq('part_number', part);
@@ -205,13 +281,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 5. Apply role-based data sanitization (Mask mobile for field_agent)
-    const role = auth.session.role;
+    // 5. Apply privacy sanitization and resolve location & serial number
     const sanitizedRows: SearchResultRow[] = (data || []).map((row) => {
       const electorRow = row as SearchResultRow;
+      const location = resolveElectorLocation(electorRow);
+      const serial = resolveElectorSerialNumber(electorRow);
+
       return {
         ...electorRow,
-        whatsapp_mob: maskMobile(electorRow.whatsapp_mob, role),
+        serial_number: serial,
+        taluk: location.taluk,
+        district: location.district,
+        ac_name: location.ac_name,
+        whatsapp_mob: isPublic ? null : maskMobile(electorRow.whatsapp_mob, auth.session.role),
       };
     });
 

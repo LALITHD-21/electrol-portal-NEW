@@ -18,6 +18,7 @@ import {
   HelpCircle,
   X,
   Info,
+  Clock,
 } from 'lucide-react';
 import { Button, SpecularButton } from '@/components/ui/Button';
 
@@ -35,19 +36,83 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
+  // Rate Limiting & Lockout State (5 failed attempts -> 2 min lockout)
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number>(0);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+
   const usernameInputRef = useRef<HTMLInputElement>(null);
 
-  // Load saved username on mount
+  // Load saved username and verify lockout on mount
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem('elector_portal_saved_user');
       if (savedUser) {
         setIdentifier(savedUser);
       }
-    } catch {
-      // ignore localStorage errors in private mode
-    }
+
+      const savedLock = localStorage.getItem('login_page_locked_until');
+      if (savedLock) {
+        const lockTimestamp = parseInt(savedLock, 10);
+        if (lockTimestamp > Date.now()) {
+          setLockedUntil(lockTimestamp);
+        } else {
+          localStorage.removeItem('login_page_locked_until');
+        }
+      }
+    } catch {}
+
+    // Check rate limit status with server
+    fetch('/api/auth/login')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.isLocked && data.lockedUntil && data.lockedUntil > Date.now()) {
+          setLockedUntil(data.lockedUntil);
+          try {
+            localStorage.setItem('login_page_locked_until', String(data.lockedUntil));
+          } catch {}
+        } else if (typeof data.attemptsLeft === 'number') {
+          setAttemptsLeft(data.attemptsLeft);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  // Ticking countdown timer effect
+  useEffect(() => {
+    if (!lockedUntil) {
+      setSecondsLeft(0);
+      return;
+    }
+
+    const checkLockStatus = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
+      setSecondsLeft(remaining);
+
+      if (remaining <= 0) {
+        setLockedUntil(null);
+        setSecondsLeft(0);
+        setAttemptsLeft(5);
+        setError(null);
+        try {
+          localStorage.removeItem('login_page_locked_until');
+        } catch {}
+      }
+    };
+
+    checkLockStatus();
+    const interval = setInterval(checkLockStatus, 1000);
+    return () => clearInterval(interval);
+  }, [lockedUntil]);
+
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const isLockedOut = Boolean(lockedUntil && secondsLeft > 0);
 
   // Listen for CapsLock
   const handleKeyDetection = (e: React.KeyboardEvent) => {
@@ -58,6 +123,7 @@ function LoginForm() {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isLockedOut) return;
     setError(null);
 
     const rawInput = identifier.trim();
@@ -77,11 +143,35 @@ function LoginForm() {
 
       const data = await res.json();
 
+      if (res.status === 429) {
+        // Locked out: 5 failed attempts
+        const lockTime = data.lockedUntil || Date.now() + 120 * 1000;
+        setLockedUntil(lockTime);
+        setAttemptsLeft(0);
+        try {
+          localStorage.setItem('login_page_locked_until', String(lockTime));
+        } catch {}
+        setError(
+          data.error ||
+            'Too many failed attempts (5/5). Account temporarily locked for 2 minutes. Please try again after 2 minutes.'
+        );
+        setIsLoading(false);
+        return;
+      }
+
       if (!res.ok) {
+        if (typeof data.attemptsLeft === 'number') {
+          setAttemptsLeft(data.attemptsLeft);
+        }
         setError(data.error || 'Invalid credentials. Please verify your username and password.');
         setIsLoading(false);
         return;
       }
+
+      // Successful login -> Clear local lockout
+      try {
+        localStorage.removeItem('login_page_locked_until');
+      } catch {}
 
       // Save remember username
       if (rememberUser) {
@@ -93,6 +183,10 @@ function LoginForm() {
           localStorage.removeItem('elector_portal_saved_user');
         } catch {}
       }
+
+      try {
+        sessionStorage.setItem('admin_login_splash', 'true');
+      } catch {}
 
       window.location.href = redirectPath;
     } catch {
@@ -141,17 +235,42 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Error Alert Banner */}
-          {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-2.5 p-3.5 text-xs text-rose-700 bg-rose-50 border border-rose-200/90 rounded-2xl animate-shake shadow-2xs text-left"
-            >
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-500 mt-0.5" />
-              <div className="flex-1">
-                <span className="font-semibold block">{error}</span>
+          {/* 2-Minute Lockout Countdown Card or Error Banner */}
+          {isLockedOut ? (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 space-y-2.5 animate-fadeIn shadow-2xs text-left">
+              <div className="flex items-start gap-2.5">
+                <Clock className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5 animate-pulse" />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-amber-950">
+                    Account Temporarily Locked
+                  </p>
+                  <p className="text-[11px] text-amber-800 leading-snug">
+                    Maximum login attempts exceeded (5/5). For security reasons, please try again after 2 minutes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-amber-200/80">
+                <span className="text-xs font-bold text-amber-900">
+                  Try again in:
+                </span>
+                <span className="px-3 py-1 rounded-xl bg-amber-200 text-amber-950 font-mono font-black text-sm tracking-wider shadow-2xs">
+                  {formatTimer(secondsLeft)}
+                </span>
               </div>
             </div>
+          ) : (
+            error && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 p-3.5 text-xs text-rose-700 bg-rose-50 border border-rose-200/90 rounded-2xl animate-shake shadow-2xs text-left"
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-500 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold block">{error}</span>
+                </div>
+              </div>
+            )
           )}
 
           {/* Login Form */}
@@ -185,11 +304,11 @@ function LoginForm() {
                   }}
                   onKeyDown={handleKeyDetection}
                   onKeyUp={handleKeyDetection}
-                  disabled={isLoading}
+                  disabled={isLoading || isLockedOut}
                   placeholder="Enter authorized username"
-                  className="w-full min-h-[48px] pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[16px] sm:text-sm font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:opacity-60 transition shadow-2xs"
+                  className="w-full min-h-[48px] pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[16px] sm:text-sm font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:opacity-60 disabled:cursor-not-allowed transition shadow-2xs"
                 />
-                {identifier && !isLoading && (
+                {identifier && !isLoading && !isLockedOut && (
                   <button
                     type="button"
                     onClick={() => {
@@ -237,15 +356,16 @@ function LoginForm() {
                   }}
                   onKeyDown={handleKeyDetection}
                   onKeyUp={handleKeyDetection}
-                  disabled={isLoading}
+                  disabled={isLoading || isLockedOut}
                   placeholder="Enter system password"
-                  className="w-full min-h-[48px] pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[16px] sm:text-sm font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:opacity-60 transition shadow-2xs"
+                  className="w-full min-h-[48px] pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[16px] sm:text-sm font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:opacity-60 disabled:cursor-not-allowed transition shadow-2xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute inset-y-0 right-0 pr-3 pl-2 flex items-center justify-center text-slate-400 hover:text-slate-600 active:text-brand-600 min-h-[44px] min-w-[44px] transition"
+                  disabled={isLockedOut}
+                  className="absolute inset-y-0 right-0 pr-3 pl-2 flex items-center justify-center text-slate-400 hover:text-slate-600 active:text-brand-600 min-h-[44px] min-w-[44px] transition disabled:opacity-50"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -292,12 +412,19 @@ function LoginForm() {
                 followMouse={true}
                 proximity={300}
                 fullWidth
+                disabled={isLoading || isLockedOut}
                 isLoading={isLoading}
                 loadingText="Authenticating Session..."
-                leftIcon={<KeyRound className="w-4 h-4 text-indigo-200" />}
-                className="h-12 min-h-[48px] rounded-2xl font-extrabold text-sm sm:text-base shadow-lg shadow-indigo-950/20 active:scale-[0.98]"
+                leftIcon={
+                  isLockedOut ? (
+                    <Clock className="w-4 h-4 text-amber-300" />
+                  ) : (
+                    <KeyRound className="w-4 h-4 text-indigo-200" />
+                  )
+                }
+                className="h-12 min-h-[48px] rounded-2xl font-extrabold text-sm sm:text-base shadow-lg shadow-indigo-950/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign In to System
+                {isLockedOut ? `Try again in ${formatTimer(secondsLeft)}` : 'Sign In to System'}
               </SpecularButton>
             </div>
           </form>

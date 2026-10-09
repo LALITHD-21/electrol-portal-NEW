@@ -11,6 +11,18 @@ export default function MobileZoomDisabler() {
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
+    // Ensure viewport meta tag is strictly locked at 1:1 scale with user-scalable=no
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'viewport');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+    );
+
     // 1. Prevent iOS Safari multi-touch gesture zooming (pinch-to-zoom)
     const preventGesture = (e: Event) => {
       e.preventDefault();

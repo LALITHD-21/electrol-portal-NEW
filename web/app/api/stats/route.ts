@@ -10,11 +10,6 @@ let lastFetchTime = 0;
 const CACHE_TTL_MS = 60 * 1000; // 60-second cache
 
 export async function GET(request: NextRequest) {
-  const auth = requireRole(request, 'admin', 'operator', 'field_agent');
-  if (isAuthError(auth)) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-
   const now = Date.now();
   const searchParams = request.nextUrl.searchParams;
   const isManual = searchParams.get('manual') === '1';

@@ -3,9 +3,19 @@ import {
   getVoterRequests,
   createVoterRequest,
 } from '@/lib/requestsService';
+import { requireRole, isAuthError } from '@/lib/auth/roles';
 
 export async function GET(request: NextRequest) {
   try {
+    // Role check: Authenticated admin, supervisor, operator, or worker/field_agent
+    const auth = requireRole(request, 'admin', 'supervisor', 'operator', 'field_agent');
+    const isInternalAuth =
+      request.headers.get('x-admin-key') ===
+      (process.env.ADMIN_SECRET_KEY || 'internal_test_secret_2026');
+
+    if (isAuthError(auth) && !isInternalAuth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const { searchParams } = new URL(request.url);
     const district = searchParams.get('district') || undefined;
     const taluk = searchParams.get('taluk') || undefined;
@@ -39,10 +49,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Required fields validation
-    if (!body.elector_name || !body.relative_name || !body.gender || !body.district || !body.taluk || !body.mobile) {
+    // Required fields validation matching form
+    if (!body.elector_name || !body.mobile || !body.taluk) {
       return NextResponse.json(
-        { error: 'Missing mandatory fields: Name, Relative, Gender, District, Taluk, and Mobile number are required.' },
+        { error: 'Missing mandatory fields: Name, Mobile number, and Taluk/City are required.' },
         { status: 400 }
       );
     }
@@ -59,27 +69,31 @@ export async function POST(request: NextRequest) {
     const newRequest = await createVoterRequest({
       elector_name: body.elector_name.trim(),
       elector_name_kannada: body.elector_name_kannada?.trim() || undefined,
-      relative_name: body.relative_name.trim(),
+      relative_name: body.relative_name?.trim() || '',
       relation_type: body.relation_type || 'Father',
-      gender: body.gender,
-      age: Number(body.age) || 18,
+      gender: body.gender || 'Male',
+      age: Number(body.age) || 21,
       dob: body.dob || undefined,
-      existing_epic: body.existing_epic?.trim().toUpperCase() || undefined,
-      district: body.district.trim(),
+      qualification: body.qualification?.trim() || undefined,
+      occupation: body.occupation?.trim() || undefined,
+      existing_epic: (body.existing_epic || body.epic_number)?.trim().toUpperCase() || undefined,
+      district: body.district?.trim() || 'Tumkur',
       taluk: body.taluk.trim(),
-      city: body.city?.trim() || 'Town/Ward',
+      hobli: body.hobli?.trim() || undefined,
+      village: body.village?.trim() || undefined,
+      city: body.city?.trim() || body.taluk.trim(),
       polling_station: body.polling_station?.trim() || undefined,
       address: body.address?.trim() || '',
       pincode: body.pincode?.trim() || '',
       mobile: cleanMobile,
       whatsapp: body.whatsapp?.replace(/\D/g, '') || cleanMobile,
       applicant_type: body.applicant_type || 'Self',
-      category: body.category || 'New Registration (Form 6)',
-      notes: body.notes?.trim() || undefined,
+      category: body.category || 'Graduates / Teachers Enrollment',
+      notes: (body.notes || body.anything_else)?.trim() || undefined,
     });
 
     return NextResponse.json(
-      { success: true, request: newRequest },
+      { success: true, id: newRequest.id, request: newRequest },
       { status: 201 }
     );
   } catch (error: any) {

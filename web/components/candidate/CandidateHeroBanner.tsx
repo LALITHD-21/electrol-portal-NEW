@@ -1,168 +1,218 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import {
-  UserPlus,
-  ShieldCheck,
-  MapPin,
-  Users,
-  Building2,
+  AlertCircle,
+  Search,
+  ChevronDown,
+  Check,
   Sparkles,
   ClipboardList,
-  ExternalLink,
-  Award,
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export interface CandidateHeroBannerProps {
-  onRequestAddVoter: () => void;
+  onRequestAddVoter?: () => void;
   candidateName?: string;
-  candidateTitle?: string;
-  constituencyName?: string;
+  candidateRole?: string;
+  constituencyTitle?: string;
+  voterCountText?: string;
   candidatePhotoUrl?: string;
+  partyLogoUrl?: string;
+  // Search integration
+  searchQuery?: string;
+  onSearchChange?: (val: string) => void;
+  selectedPlace?: string;
+  onSelectPlace?: (place: string) => void;
+  relativeNameFilter?: string;
+  onRelativeNameChange?: (val: string) => void;
 }
 
 export function CandidateHeroBanner({
   onRequestAddVoter,
-  candidateName = 'Party Member / Candidate',
-  candidateTitle = 'Official Candidate • Karnataka Legislative Council',
-  constituencyName = 'South-East & Central Karnataka Constituency',
-  candidatePhotoUrl = '/candidate-placeholder.png',
+  candidateName,
+  candidateRole,
+  constituencyTitle,
+  voterCountText,
+  candidatePhotoUrl = '/candidate-avatar.jpg',
+  partyLogoUrl = '/inc-logo.png',
+  searchQuery = '',
+  onSearchChange,
+  selectedPlace = 'All places',
+  onSelectPlace,
+  relativeNameFilter = '',
+  onRelativeNameChange,
 }: CandidateHeroBannerProps) {
+  const [showRelativeInput, setShowRelativeInput] = useState(false);
+  const { language, toggleLanguage, t } = useLanguage();
+
+  const displayName =
+    language === 'kn' ? t.candidateName : (candidateName || t.candidateName);
+  const displayRole =
+    language === 'kn' ? t.candidateRole : (candidateRole || t.candidateRole);
+  const displayConstituency =
+    language === 'kn'
+      ? t.constituencyTitle
+      : (constituencyTitle || t.constituencyTitle);
+  const displayVoterCount =
+    language === 'kn' ? t.voterCountText : (voterCountText || t.voterCountText);
+
   return (
-    <div className="w-full relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-50 via-sky-100/50 to-blue-50/80 border border-sky-200/90 shadow-sm transition-all duration-300 mb-6">
-      {/* Decorative Light-Blue Ambient Glows */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-sky-300/25 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-blue-300/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="w-full max-w-2xl mx-auto space-y-4 font-sans">
+      {/* 1. Top Bar: MLC ELECTION 2026 + Language Switcher */}
+      <div className="flex items-center justify-between px-1 text-slate-800">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-black tracking-wider uppercase text-blue-800 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+            <span className="relative w-3.5 h-4 rounded-2xs overflow-hidden inline-block flex-shrink-0">
+              <Image src={partyLogoUrl} alt="INC" fill unoptimized className="object-cover" />
+            </span>
+            <span>{t.mlcElection}</span>
+          </span>
+        </div>
 
-      {/* Top Specular Gradient Line in Sky Cyan */}
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400 opacity-90" />
+        {/* Language Switcher Pill */}
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="px-3.5 py-1 rounded-full text-xs font-extrabold border border-blue-300 bg-white/95 text-blue-800 hover:bg-blue-50 active:scale-95 shadow-2xs transition"
+          aria-label={language === 'en' ? 'Switch to Kannada' : 'Switch to English'}
+        >
+          {language === 'en' ? 'ಕನ್ನಡ' : 'English'}
+        </button>
+      </div>
 
-      <div className="relative p-5 sm:p-7 md:p-8">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
-          {/* Candidate / Leader Photo Badge */}
-          <div className="relative flex-shrink-0 group">
-            {/* Glowing Ring with Light Blue specular accent */}
-            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-sky-400 to-blue-500 opacity-60 blur-xs group-hover:opacity-90 transition duration-300" />
-            
-            <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-2xl sm:rounded-3xl bg-white border-2 border-sky-200 shadow-md overflow-hidden flex items-center justify-center p-1">
-              {/* Leader Photo / High-Definition Avatar */}
-              <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-b from-sky-100 to-sky-200 flex items-center justify-center">
-                <Image
-                  src="/app-logo.png"
-                  alt={candidateName}
-                  fill
-                  priority
-                  unoptimized
-                  className="object-contain p-2 hover:scale-105 transition-transform duration-300"
-                />
-              </div>
+      {/* 2. Candidate Hero Card (Royal Blue Gradient Theme with INC Identity) */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#0284c7] text-white shadow-xl shadow-blue-900/15 p-4 sm:p-6 border border-blue-400/40">
+        {/* Subtle Indian National Congress Tricolor Accent Stripe at Top */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF671F] via-white to-[#046A38] opacity-90" />
 
-              {/* Status Badge Pin */}
-              <div className="absolute bottom-1 right-1 bg-sky-600 text-white rounded-full p-1.5 shadow-md border-2 border-white" title="Official Candidate / Verified">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-            </div>
+        {/* Official Indian National Congress Tricolor Flag Background Integration */}
+        <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
+          <div className="absolute right-0 top-0 bottom-0 w-full sm:w-3/4 md:w-2/3 h-full opacity-20 sm:opacity-25 translate-x-16 sm:translate-x-24 md:translate-x-28">
+            <Image
+              src="/congress-flag.png"
+              alt="Indian National Congress Flag"
+              fill
+              priority
+              unoptimized
+              className="object-cover object-center"
+            />
+          </div>
 
-            {/* Live Status Pill below photo */}
-            <div className="mt-2 text-center">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
-                MLC Candidate
-              </span>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1e40af] via-[#1e40af]/90 sm:via-[#1e40af]/75 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-blue-950/25 via-transparent to-blue-900/15" />
+        </div>
+
+        <div className="relative flex items-center justify-between gap-3.5 sm:gap-6">
+          {/* Candidate Portrait Avatar Frame */}
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36 min-w-[112px] min-h-[112px] sm:min-w-[144px] sm:min-h-[144px] shrink-0">
+            <div className="relative w-full h-full rounded-2xl sm:rounded-3xl border-2 border-white/95 shadow-xl shadow-blue-950/25 overflow-hidden bg-slate-900/10 group">
+              <Image
+                src={candidatePhotoUrl}
+                alt={displayName}
+                fill
+                priority
+                unoptimized
+                className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 640px) 112px, 144px"
+              />
             </div>
           </div>
 
-          {/* Candidate & Constituency Metadata */}
-          <div className="flex-1 text-center md:text-left space-y-3 min-w-0">
-            {/* Top Pill Tags */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-black uppercase tracking-wider bg-white/90 text-sky-800 border border-sky-200 shadow-2xs">
-                <Award className="w-3.5 h-3.5 text-sky-600" />
-                <span>Karnataka Legislative Council</span>
+          {/* Candidate Text Metadata */}
+          <div className="flex-1 min-w-0 space-y-1 sm:space-y-1.5 py-0.5">
+            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-200 leading-tight truncate">
+              {displayConstituency}
+            </div>
+            <h2 className="text-base sm:text-2xl md:text-3xl font-black tracking-tight text-white leading-snug truncate">
+              {displayName}
+            </h2>
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {/* INC Candidate Pill */}
+              <span className="relative overflow-hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-black text-blue-950 shadow-sm border border-white/90 backdrop-blur-md">
+                <div className="absolute inset-0 flex flex-col pointer-events-none opacity-40">
+                  <div className="flex-1 bg-[#FF9933]" />
+                  <div className="flex-1 bg-white" />
+                  <div className="flex-1 bg-[#138808]" />
+                </div>
+                <div className="absolute inset-0 bg-white/55 pointer-events-none" />
+
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <span className="relative w-3.5 h-4.5 rounded-2xs overflow-hidden inline-block shrink-0">
+                    <Image src={partyLogoUrl} alt="INC" fill unoptimized className="object-cover" />
+                  </span>
+                  <span>{displayRole}</span>
+                </span>
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-sky-500/10 text-sky-700 border border-sky-300/60">
-                <MapPin className="w-3 h-3 text-sky-600" />
-                <span>5 Districts Combined Roll</span>
+
+              {/* Listed Voters Pill */}
+              <span className="inline-block px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-extrabold bg-blue-950/50 border border-blue-300/40 text-blue-100 backdrop-blur-xs truncate max-w-full">
+                {displayVoterCount}
               </span>
-            </div>
-
-            {/* Candidate Title & Honorifics */}
-            <div>
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                {candidateName}
-              </h2>
-              <p className="text-xs sm:text-sm font-bold text-sky-700 mt-0.5">
-                {candidateTitle}
-              </p>
-              <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-1">
-                {constituencyName} • Tumkur, Chitradurga, Davanagere, Kolar &amp; Chikkaballapura
-              </p>
-            </div>
-
-            {/* Metric Highlights */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 py-1 max-w-lg mx-auto md:mx-0">
-              <div className="bg-white/80 backdrop-blur-xs rounded-xl p-2 sm:p-2.5 border border-sky-200/80 text-center md:text-left shadow-2xs">
-                <div className="flex items-center justify-center md:justify-start gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                  <Users className="w-3 h-3 text-sky-600" />
-                  <span>Voters</span>
-                </div>
-                <div className="text-xs sm:text-sm font-black text-slate-900 mt-0.5">
-                  2,23,789
-                </div>
-              </div>
-
-              <div className="bg-white/80 backdrop-blur-xs rounded-xl p-2 sm:p-2.5 border border-sky-200/80 text-center md:text-left shadow-2xs">
-                <div className="flex items-center justify-center md:justify-start gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                  <Building2 className="w-3 h-3 text-sky-600" />
-                  <span>Booths</span>
-                </div>
-                <div className="text-xs sm:text-sm font-black text-slate-900 mt-0.5">
-                  147 Stations
-                </div>
-              </div>
-
-              <div className="bg-white/80 backdrop-blur-xs rounded-xl p-2 sm:p-2.5 border border-sky-200/80 text-center md:text-left shadow-2xs">
-                <div className="flex items-center justify-center md:justify-start gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                  <MapPin className="w-3 h-3 text-sky-600" />
-                  <span>Districts</span>
-                </div>
-                <div className="text-xs sm:text-sm font-black text-slate-900 mt-0.5">
-                  5 Districts
-                </div>
-              </div>
-            </div>
-
-            {/* Action Bar */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-1">
-              {/* Request to Add Voter (Specular Button) */}
-              <Button
-                type="button"
-                onClick={onRequestAddVoter}
-                variant="primary"
-                specular={true}
-                lineColor="#7dd3fc"
-                baseColor="#0369a1"
-                leftIcon={<UserPlus className="w-4 h-4 text-sky-200" />}
-                className="bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md active:scale-95 transition"
-              >
-                Request to Add Voter
-              </Button>
-
-              {/* Admin Requests Portal Link */}
-              <Link
-                href="/admin/requests"
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white hover:bg-sky-50 text-sky-800 border border-sky-300 font-extrabold text-xs shadow-2xs transition active:scale-95"
-              >
-                <ClipboardList className="w-3.5 h-3.5 text-sky-600" />
-                <span>Admin Requests Portal</span>
-                <ExternalLink className="w-3 h-3 text-slate-400" />
-              </Link>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 3. Alert / Notice Box Below Hero */}
+      <div className="bg-blue-50/95 backdrop-blur-xs border border-blue-200/90 rounded-2xl p-3.5 sm:p-4 flex items-start gap-3 shadow-2xs">
+        <div className="p-1 rounded-full bg-blue-100 text-blue-700 flex-shrink-0 mt-0.5">
+          <AlertCircle className="w-4 h-4 text-blue-700" />
+        </div>
+        <div className="text-xs font-semibold text-blue-950 leading-relaxed">
+          {t.bannerNotice}
+        </div>
+      </div>
+
+      {/* 4. "Find your name in the voter list" Card */}
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-6 space-y-3.5 transition-all">
+        <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+          {t.findNameTitle}
+        </h3>
+
+        {/* Search Input Box */}
+        <div className="relative flex items-center bg-slate-50/90 rounded-2xl border border-slate-200 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100/70 focus-within:bg-white transition-all">
+          <div className="pl-3.5 pr-1.5 text-slate-400 flex items-center justify-center">
+            <Search className="w-5 h-5 text-slate-400" />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            placeholder={t.searchPlaceholder}
+            className="w-full min-h-[46px] py-2.5 pr-4 text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal bg-transparent focus:outline-none"
+          />
+        </div>
+
+        {/* Accordion: + Add father / husband name */}
+        <div className="pt-0.5">
+          <button
+            type="button"
+            onClick={() => setShowRelativeInput(!showRelativeInput)}
+            className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-800 transition"
+          >
+            <span>{showRelativeInput ? t.hideRelativeBtn : t.addRelativeBtn}</span>
+          </button>
+
+          {showRelativeInput && (
+            <div className="mt-2 animate-fadeIn">
+              <input
+                type="text"
+                value={relativeNameFilter}
+                onChange={(e) => onRelativeNameChange?.(e.target.value)}
+                placeholder={t.relativePlaceholder}
+                className="w-full px-3.5 py-2 text-xs font-semibold text-slate-900 placeholder:text-slate-400 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Tip text */}
+        <p className="text-[11px] text-slate-500 font-medium">
+          {t.searchTip}
+        </p>
       </div>
     </div>
   );

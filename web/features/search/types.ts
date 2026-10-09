@@ -17,7 +17,10 @@ export interface SearchResultRow {
   village: string | null;
   part_number: string | null;
   polling_station_name: string | null;
+  polling_address?: string | null;
   address: string | null;
+  qualification?: string | null;
+  occupation?: string | null;
   isFuzzyMatch?: boolean;
 }
 
@@ -40,6 +43,7 @@ export interface SearchApiResponse {
 
 export interface SearchFacets {
   districts: string[];
+  taluks?: string[];
   acs: string[];
   parts: string[];
   districtAcs?: Record<string, string[]>;
@@ -47,6 +51,7 @@ export interface SearchFacets {
 
 export interface SearchFiltersState {
   district?: string;
+  taluk?: string;
   ac?: string;
   part?: string;
   village?: string;

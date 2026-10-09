@@ -26,6 +26,9 @@ import {
   ShieldCheck,
   ArrowUpDown,
   ExternalLink,
+  Send,
+  Layers,
+  ShieldAlert,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
@@ -35,6 +38,8 @@ import {
   getAllTaluks,
 } from '@/lib/constituencyData';
 import { VoterAdditionRequest } from '@/lib/requestsService';
+import { STATUS_MAP, getStatusConfig, RequestStatus, ALLOWED_TRANSITIONS } from '@/lib/status-map';
+import { AdminRequestDetailDrawer } from '@/components/requests/AdminRequestDetailDrawer';
 import { RequestAddVoterModal } from '@/components/requests/RequestAddVoterModal';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -43,53 +48,91 @@ export default function AdminRequestsPage() {
   const [requests, setRequests] = useState<VoterAdditionRequest[]>([]);
   const [stats, setStats] = useState({
     total: 0,
-    pending: 0,
-    in_review: 0,
-    approved: 0,
+    new: 0,
+    contacted: 0,
+    documents_pending: 0,
+    needs_info: 0,
+    verified: 0,
+    form_submitted: 0,
+    enrolled: 0,
     rejected: 0,
+    duplicate: 0,
+    closed: 0,
+    overdue: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Authenticated user role from default login (Section 5.6)
+  const [userRole, setUserRole] = useState<'admin' | 'supervisor' | 'operator' | 'field_agent'>('admin');
+
+  useEffect(() => {
+    async function loadRole() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.role) setUserRole(data.role);
+        }
+      } catch {}
+    }
+    loadRole();
+  }, []);
+
+  // Multi-selection for bulk actions (Section 5.5)
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
+
+  // Filters (Search section removed from admin page per requirements)
   const [districtFilter, setDistrictFilter] = useState('all');
   const [talukFilter, setTalukFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Modals & Drawers
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<VoterAdditionRequest | null>(null);
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [rejectionTargetId, setRejectionTargetId] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('Duplicate entry detected in existing electoral roll');
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Load requests
-  const fetchRequests = async () => {
-    setIsLoading(true);
+  // Load requests with real-time support
+  const fetchRequests = async (isBackground = false) => {
+    if (!isBackground) {
+      setIsLoading(true);
+    } else {
+      setIsSyncing(true);
+    }
     setError(null);
     try {
       const params = new URLSearchParams();
       if (districtFilter !== 'all') params.set('district', districtFilter);
       if (talukFilter !== 'all') params.set('taluk', talukFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      if (searchQuery.trim()) params.set('search', searchQuery.trim());
 
       const res = await fetch(`/api/requests?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load requests');
       const data = await res.json();
       setRequests(data.requests || []);
       if (data.stats) setStats(data.stats);
+      setLastSynced(new Date());
     } catch (err: any) {
-      setError(err.message || 'Error fetching voter requests');
+      if (!isBackground) {
+        setError(err.message || 'Error fetching voter requests');
+      }
     } finally {
-      setIsLoading(false);
+      if (!isBackground) setIsLoading(false);
+      setIsSyncing(false);
     }
   };
 
   useEffect(() => {
-    fetchRequests();
+    fetchRequests(false);
+
+    const interval = setInterval(() => {
+      fetchRequests(true);
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, [districtFilter, talukFilter, statusFilter]);
 
   // Dynamic taluks based on selected district
@@ -100,59 +143,76 @@ export default function AdminRequestsPage() {
     return getTaluksByDistrict(districtFilter).map((t) => t.name);
   }, [districtFilter]);
 
-  // Client-side quick filter on search query
-  const filteredRequests = useMemo(() => {
-    if (!searchQuery.trim()) return requests;
-    const q = searchQuery.toLowerCase().trim();
-    return requests.filter(
-      (r) =>
-        r.id.toLowerCase().includes(q) ||
-        r.elector_name.toLowerCase().includes(q) ||
-        r.relative_name.toLowerCase().includes(q) ||
-        r.mobile.includes(q) ||
-        r.taluk.toLowerCase().includes(q) ||
-        r.city.toLowerCase().includes(q) ||
-        (r.existing_epic && r.existing_epic.toLowerCase().includes(q))
-    );
-  }, [requests, searchQuery]);
+  // Requests filtered by status and location
+  const filteredRequests = requests;
 
-  // Status Updater
-  const handleUpdateStatus = async (
-    id: string,
-    newStatus: 'pending' | 'in_review' | 'approved' | 'rejected',
-    reason?: string
-  ) => {
-    setIsUpdatingStatus(true);
+  // Selection helpers
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === filteredRequests.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredRequests.map((r) => r.id));
+    }
+  };
+
+  const handleToggleSelect = (id: string, e: React.MouseEvent | React.ChangeEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Inspect selection uniformity for Section 5.5 bulk rules
+  const selectedItems = useMemo(
+    () => requests.filter((r) => selectedIds.includes(r.id)),
+    [requests, selectedIds]
+  );
+
+  const isUniformSelection = useMemo(() => {
+    if (selectedItems.length <= 1) return true;
+    const firstStatus = selectedItems[0].status;
+    return selectedItems.every((r) => r.status === firstStatus);
+  }, [selectedItems]);
+
+  const commonStatus = selectedItems.length > 0 ? selectedItems[0].status : null;
+
+  // Allowed non-terminal bulk actions
+  const allowedBulkTargets = useMemo(() => {
+    if (!isUniformSelection || !commonStatus) return [];
+    const targets = ALLOWED_TRANSITIONS[commonStatus] || [];
+    // Strict prompt rule: Never bulk enrolled or bulk rejected
+    return targets.filter((t) => !['enrolled', 'rejected'].includes(t));
+  }, [isUniformSelection, commonStatus]);
+
+  // Bulk transition action
+  const handleExecuteBulkAction = async (targetStatus: RequestStatus) => {
+    if (selectedIds.length === 0) return;
+    setIsBulkProcessing(true);
+    setBulkNotice(null);
+
     try {
-      const res = await fetch(`/api/requests/${id}`, {
-        method: 'PATCH',
+      const res = await fetch('/api/requests/bulk', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: newStatus,
-          rejection_reason: reason,
-          reviewed_by: 'Election Operations Admin',
+          requestIds: selectedIds,
+          targetStatus,
+          actorId: `${userRole}_desk`,
+          batchNote: `Batch transition to ${targetStatus} executed by ${userRole}.`,
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to update status');
-      const updated = await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Bulk transition failed');
 
-      // Update in local state
-      setRequests((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, ...updated.request } : r))
-      );
-      if (selectedRequest?.id === id) {
-        setSelectedRequest((prev) => (prev ? { ...prev, ...updated.request } : null));
-      }
-
-      // Re-fetch stats
-      fetchRequests();
+      setBulkNotice(`Successfully transitioned ${data.count} requests to "${targetStatus}".`);
+      setSelectedIds([]);
+      fetchRequests(true);
+      setTimeout(() => setBulkNotice(null), 4000);
     } catch (err: any) {
-      alert(`Error updating status: ${err.message}`);
+      setBulkNotice(`Error: ${err.message}`);
     } finally {
-      setIsUpdatingStatus(false);
-      setIsRejectModalOpen(false);
-      setRejectionTargetId(null);
+      setIsBulkProcessing(false);
     }
   };
 
@@ -166,6 +226,7 @@ export default function AdminRequestsPage() {
     const exportRows = filteredRequests.map((r) => ({
       'Request ID': r.id,
       Status: r.status.toUpperCase(),
+      'Public Step': STATUS_MAP[r.status]?.publicStepLabel.en || r.status,
       'Voter Name': r.elector_name,
       'Kannada Name': r.elector_name_kannada || '',
       'Relative Name': r.relative_name,
@@ -183,9 +244,11 @@ export default function AdminRequestsPage() {
       Category: r.category,
       'Applicant Type': r.applicant_type,
       'Existing EPIC': r.existing_epic || 'N/A',
-      Notes: r.notes || '',
-      'Rejection Reason': r.rejection_reason || '',
-      'Reviewed By': r.reviewed_by || '',
+      'Form Type': r.form_type || 'Form 18',
+      'Ack Number': r.form_ack_number || '',
+      'Enrolled Part': r.enrolled_part_number || '',
+      'Enrolled Serial': r.enrolled_serial_number || '',
+      'SLA Due': r.sla_due_at ? new Date(r.sla_due_at).toLocaleString('en-IN') : '',
       'Submitted Date': new Date(r.created_at).toLocaleString('en-IN'),
     }));
 
@@ -193,7 +256,6 @@ export default function AdminRequestsPage() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Voter Requests');
 
-    // Auto col width
     const colWidths = Object.keys(exportRows[0]).map((key) => ({
       wch: Math.max(key.length, 16),
     }));
@@ -232,42 +294,93 @@ export default function AdminRequestsPage() {
     link.click();
   };
 
+  const nowTime = Date.now();
+
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-sky-50 via-white to-sky-50/60 p-5 sm:p-6 rounded-3xl border border-sky-100 shadow-2xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-blue-50 via-white to-blue-50/60 p-5 sm:p-6 rounded-3xl border border-blue-100 shadow-2xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-sky-600 text-white shadow-2xs">
+            <span className="p-2 rounded-xl bg-blue-600 text-white shadow-2xs">
               <ClipboardList className="w-5 h-5" />
             </span>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Voter Addition Requests Operations
+              Voter Enrolment Request Operations
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 font-medium pl-1">
-            ಮತದಾರರ ಸೇರ್ಪಡೆ ವಿನಂತಿಗಳು • Real-time field application desk across 5 districts &amp; 30 constituencies.
+            ಮತದಾರರ ಸೇರ್ಪಡೆ ವಿನಂತಿಗಳು • Form 18 application workflow across 5 districts.
           </p>
         </div>
 
         {/* Global Header Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={fetchRequests}
-            title="Refresh requests"
-            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shadow-2xs transition"
-          >
-            <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin text-sky-600')} />
-          </button>
+          {/* Default Login Role Badge (Fixed, non-shifting) */}
+          <div className="flex items-center bg-white border border-slate-200 rounded-2xl p-1 shadow-2xs text-xs select-none">
+            <span className="text-[10px] font-bold text-slate-400 px-2 uppercase tracking-wider">
+              ROLE:
+            </span>
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded-lg font-black transition',
+                userRole === 'admin'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600'
+              )}
+            >
+              Admin
+            </span>
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded-lg font-black transition',
+                userRole === 'supervisor'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600'
+              )}
+            >
+              Supervisor
+            </span>
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded-lg font-black transition',
+                userRole === 'operator'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600'
+              )}
+            >
+              Operator
+            </span>
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded-lg font-black transition',
+                userRole === 'field_agent'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600'
+              )}
+            >
+              Worker
+            </span>
+          </div>
+
+          {/* Live Sync Indicator */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/90 text-emerald-800 text-xs font-bold shadow-2xs">
+            <span className={cn("w-2 h-2 rounded-full bg-emerald-500", isSyncing ? "animate-ping" : "animate-pulse")} />
+            <span>Live Sync</span>
+            {lastSynced && (
+              <span className="text-[10px] text-emerald-600 font-medium hidden sm:inline">
+                ({lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })})
+              </span>
+            )}
+          </div>
 
           <button
             type="button"
-            onClick={handleExportCsv}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition"
+            onClick={() => fetchRequests(false)}
+            title="Force refresh now"
+            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shadow-2xs transition active:scale-95"
           >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>CSV</span>
+            <RefreshCw className={cn('w-4 h-4', (isLoading || isSyncing) && 'animate-spin text-blue-600')} />
           </button>
 
           <Button
@@ -277,7 +390,7 @@ export default function AdminRequestsPage() {
             leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-600" />}
             className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 text-xs font-bold"
           >
-            Export Excel (.xlsx)
+            Export Excel
           </Button>
 
           <Button
@@ -286,17 +399,17 @@ export default function AdminRequestsPage() {
             variant="primary"
             specular={true}
             lineColor="#7dd3fc"
-            baseColor="#0284c7"
-            leftIcon={<UserPlus className="w-4 h-4 text-sky-200" />}
-            className="bg-gradient-to-r from-sky-600 to-blue-600 text-white text-xs font-black shadow-md"
+            baseColor="#1d4ed8"
+            leftIcon={<UserPlus className="w-4 h-4 text-blue-200" />}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md"
           >
             + New Request
           </Button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      {/* KPI Cards: Section 5.4 Prominent SLA / Overdue counter */}
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         {/* Total */}
         <div
           onClick={() => setStatusFilter('all')}
@@ -310,98 +423,104 @@ export default function AdminRequestsPage() {
           <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
             Total Requests
           </div>
-          <div className="text-2xl font-black mt-1">{stats.total}</div>
+          <div className="text-2xl font-black mt-1">{stats.total || 0}</div>
           <div className="text-[10px] mt-1 opacity-70">All applications</div>
         </div>
 
-        {/* Pending */}
+        {/* Overdue / Needs Attention */}
         <div
-          onClick={() => setStatusFilter('pending')}
+          onClick={() => setStatusFilter('all')}
           className={cn(
             'p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs',
-            statusFilter === 'pending'
-              ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-              : 'bg-amber-50/70 text-amber-900 border-amber-200 hover:bg-amber-100/70'
+            (stats.overdue || 0) > 0
+              ? 'bg-rose-50 border-rose-300 text-rose-900 ring-2 ring-rose-200'
+              : 'bg-white border-slate-200 text-slate-700'
           )}
         >
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-            <span>Pending</span>
-            <Clock className="w-3.5 h-3.5" />
+            <span>Needs Attention</span>
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
           </div>
-          <div className="text-2xl font-black mt-1">{stats.pending}</div>
-          <div className="text-[10px] mt-1 opacity-80">Requires verification</div>
+          <div className="text-2xl font-black mt-1 text-rose-700">{stats.overdue || 0}</div>
+          <div className="text-[10px] mt-1 text-rose-600 font-semibold">Overdue SLA</div>
         </div>
 
-        {/* In Review */}
+        {/* Received */}
         <div
-          onClick={() => setStatusFilter('in_review')}
+          onClick={() => setStatusFilter('new')}
           className={cn(
             'p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs',
-            statusFilter === 'in_review'
+            statusFilter === 'new'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+              : 'bg-blue-50/70 text-blue-900 border-blue-200 hover:bg-blue-100/70'
+          )}
+        >
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+            <span>Received</span>
+            <Clock className="w-3.5 h-3.5" />
+          </div>
+          <div className="text-2xl font-black mt-1">{stats.new || 0}</div>
+          <div className="text-[10px] mt-1 opacity-80">New applications</div>
+        </div>
+
+        {/* Verified by Team */}
+        <div
+          onClick={() => setStatusFilter('verified')}
+          className={cn(
+            'p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs',
+            statusFilter === 'verified'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+              : 'bg-indigo-50 text-indigo-900 border-indigo-200 hover:bg-indigo-100'
+          )}
+        >
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+            <span>Verified</span>
+            <Eye className="w-3.5 h-3.5" />
+          </div>
+          <div className="text-2xl font-black mt-1">{stats.verified || 0}</div>
+          <div className="text-[10px] mt-1 opacity-80">Ready for filing</div>
+        </div>
+
+        {/* Form Submitted */}
+        <div
+          onClick={() => setStatusFilter('form_submitted')}
+          className={cn(
+            'p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs',
+            statusFilter === 'form_submitted'
               ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
               : 'bg-sky-50 text-sky-900 border-sky-200 hover:bg-sky-100'
           )}
         >
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-            <span>In Review</span>
-            <Eye className="w-3.5 h-3.5" />
+            <span>Form Submitted</span>
+            <Send className="w-3.5 h-3.5" />
           </div>
-          <div className="text-2xl font-black mt-1">{stats.in_review}</div>
-          <div className="text-[10px] mt-1 opacity-80">With Taluk desk</div>
+          <div className="text-2xl font-black mt-1">{stats.form_submitted || 0}</div>
+          <div className="text-[10px] mt-1 opacity-80">Filed at ERO desk</div>
         </div>
 
-        {/* Approved */}
+        {/* Confirmed in Roll */}
         <div
-          onClick={() => setStatusFilter('approved')}
+          onClick={() => setStatusFilter('enrolled')}
           className={cn(
             'p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs',
-            statusFilter === 'approved'
+            statusFilter === 'enrolled'
               ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
               : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
           )}
         >
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-            <span>Approved</span>
+            <span>Confirmed</span>
             <CheckCircle2 className="w-3.5 h-3.5" />
           </div>
-          <div className="text-2xl font-black mt-1">{stats.approved}</div>
-          <div className="text-[10px] mt-1 opacity-80">Enrolled in roll</div>
-        </div>
-
-        {/* Rejected */}
-        <div
-          onClick={() => setStatusFilter('rejected')}
-          className={cn(
-            'p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs col-span-2 sm:col-span-1',
-            statusFilter === 'rejected'
-              ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-              : 'bg-rose-50 text-rose-900 border-rose-200 hover:bg-rose-100'
-          )}
-        >
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-            <span>Rejected</span>
-            <XCircle className="w-3.5 h-3.5" />
-          </div>
-          <div className="text-2xl font-black mt-1">{stats.rejected}</div>
-          <div className="text-[10px] mt-1 opacity-80">Flagged / Duplicates</div>
+          <div className="text-2xl font-black mt-1">{stats.enrolled || 0}</div>
+          <div className="text-[10px] mt-1 opacity-80">In published roll</div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Operational Filter Bar (Search section moved to Analyst dashboard) */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Search Box */}
-          <div className="lg:col-span-2 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by Voter Name, Mobile, Taluk, or ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[40px]"
-            />
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* District Filter */}
           <div>
             <select
@@ -410,7 +529,7 @@ export default function AdminRequestsPage() {
                 setDistrictFilter(e.target.value);
                 setTalukFilter('all');
               }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[40px]"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px]"
             >
               <option value="all">All Districts (5)</option>
               {CONSTITUENCY_DISTRICTS.map((d) => (
@@ -426,7 +545,7 @@ export default function AdminRequestsPage() {
             <select
               value={talukFilter}
               onChange={(e) => setTalukFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[40px]"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px]"
             >
               <option value="all">All Taluks</option>
               {availableTaluks.map((t) => (
@@ -442,28 +561,34 @@ export default function AdminRequestsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[40px]"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px]"
             >
               <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in_review">In Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
+              <option value="new">Received (New)</option>
+              <option value="contacted">Contacted</option>
+              <option value="documents_pending">Documents Needed</option>
+              <option value="needs_info">Needs Info</option>
+              <option value="verified">Verified by Team</option>
+              <option value="form_submitted">Form Submitted</option>
+              <option value="enrolled">Confirmed in Roll</option>
+              <option value="rejected">Could Not Process</option>
+              <option value="duplicate">Already in Roll</option>
+              <option value="closed">Closed / Withdrawn</option>
             </select>
           </div>
         </div>
 
         {/* Active Filter Tags */}
-        {(districtFilter !== 'all' || talukFilter !== 'all' || statusFilter !== 'all' || searchQuery) && (
+        {(districtFilter !== 'all' || talukFilter !== 'all' || statusFilter !== 'all') && (
           <div className="flex items-center gap-2 pt-1 text-xs">
             <span className="text-slate-400 font-semibold">Active filters:</span>
             {districtFilter !== 'all' && (
-              <span className="px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 font-bold text-[11px]">
+              <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 font-bold text-[11px]">
                 Dist: {districtFilter}
               </span>
             )}
             {talukFilter !== 'all' && (
-              <span className="px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 font-bold text-[11px]">
+              <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 font-bold text-[11px]">
                 Taluk: {talukFilter}
               </span>
             )}
@@ -478,7 +603,6 @@ export default function AdminRequestsPage() {
                 setDistrictFilter('all');
                 setTalukFilter('all');
                 setStatusFilter('all');
-                setSearchQuery('');
               }}
               className="text-rose-600 hover:text-rose-700 font-bold text-[11px] underline ml-auto"
             >
@@ -488,190 +612,238 @@ export default function AdminRequestsPage() {
         )}
       </div>
 
-      {/* Main Table / Requests List */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Results Count Header */}
-        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between text-xs font-bold text-slate-600">
-          <div className="flex items-center gap-2">
-            <span>Showing</span>
-            <span className="text-slate-900 font-black">{filteredRequests.length}</span>
-            <span>of {requests.length} requests</span>
+      {/* Bulk Action Sticky Bar (Section 5.5) */}
+      {selectedIds.length > 0 && (
+        <div className="p-3.5 bg-blue-900 text-white rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg animate-slideDown">
+          <div className="flex items-center gap-2.5">
+            <Layers className="w-4 h-4 text-blue-300" />
+            <span className="text-xs font-black">
+              {selectedIds.length} request{selectedIds.length > 1 ? 's' : ''} selected
+            </span>
+            {!isUniformSelection && (
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-amber-500/30 text-amber-200 border border-amber-400/30">
+                ⚠️ Mixed statuses: Select items of same status for bulk actions
+              </span>
+            )}
           </div>
 
-          <span className="text-[11px] text-slate-400">
-            Click row or actions to update status
-          </span>
-        </div>
+          <div className="flex items-center gap-2">
+            {isUniformSelection &&
+              allowedBulkTargets.map((target) => (
+                <button
+                  key={target}
+                  type="button"
+                  disabled={isBulkProcessing}
+                  onClick={() => handleExecuteBulkAction(target)}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-2xs transition disabled:opacity-50"
+                >
+                  {isBulkProcessing
+                    ? 'Processing...'
+                    : `Bulk: ${STATUS_MAP[target].adminActionLabel || STATUS_MAP[target].adminLabel}`}
+                </button>
+              ))}
 
-        {/* Requests Table (Desktop) */}
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
+      {bulkNotice && (
+        <div className="p-3 bg-blue-50 border border-blue-200 text-blue-950 rounded-xl text-xs font-bold animate-fadeIn">
+          {bulkNotice}
+        </div>
+      )}
+
+      {/* Main Table / Requests List */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+          <table className="w-full text-left text-xs text-slate-600">
+            <thead className="bg-slate-50 text-[11px] font-black text-slate-500 uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">Tracking ID</th>
-                <th className="py-3 px-4">Elector Details</th>
-                <th className="py-3 px-4">Relative</th>
-                <th className="py-3 px-4">Location (Taluk/City)</th>
-                <th className="py-3 px-4">Contact</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3.5 pl-4 pr-1 w-8">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length > 0 && selectedIds.length === filteredRequests.length}
+                    onChange={handleToggleSelectAll}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="py-3.5 px-3">Ref ID</th>
+                <th className="py-3.5 px-4">Applicant</th>
+                <th className="py-3.5 px-4">Relative</th>
+                <th className="py-3.5 px-4">Constituency / Taluk</th>
+                <th className="py-3.5 px-4">Contact</th>
+                <th className="py-3.5 px-4">SLA / Window</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4 text-right">Workflow</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+            <tbody className="divide-y divide-slate-100 font-medium">
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
-                    <div className="max-w-xs mx-auto space-y-2">
-                      <ClipboardList className="w-8 h-8 text-slate-300 mx-auto" />
-                      <p className="font-semibold text-slate-600">No voter addition requests found</p>
-                      <p className="text-[11px]">Adjust your filters or register a new request above.</p>
+                  <td colSpan={9} className="py-16 text-center text-slate-400">
+                    <div className="max-w-md mx-auto space-y-3">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto text-blue-600 shadow-2xs">
+                        <ClipboardList className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <p className="text-base font-extrabold text-slate-800">
+                          No Voter Requests Match
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                          Try adjusting your filters or search query. New public submissions will appear here automatically.
+                        </p>
+                      </div>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((req) => (
-                  <tr
-                    key={req.id}
-                    className="hover:bg-sky-50/30 transition cursor-pointer"
-                    onClick={() => setSelectedRequest(req)}
-                  >
-                    {/* ID */}
-                    <td className="py-3.5 px-4 font-mono font-bold text-sky-700">
-                      {req.id}
-                    </td>
+                filteredRequests.map((req) => {
+                  const isItemOverdue =
+                    !['enrolled', 'rejected', 'duplicate', 'closed', 'withdrawn'].includes(req.status) &&
+                    new Date(req.sla_due_at).getTime() < nowTime;
+                  const cfg = getStatusConfig(req.status);
+                  const isChecked = selectedIds.includes(req.id);
 
-                    {/* Elector */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-extrabold text-slate-900">
-                        {req.elector_name}
-                      </div>
-                      {req.elector_name_kannada && (
-                        <div className="text-[11px] text-slate-500">
-                          {req.elector_name_kannada}
+                  return (
+                    <tr
+                      key={req.id}
+                      className={cn(
+                        'hover:bg-blue-50/30 transition cursor-pointer',
+                        isChecked && 'bg-blue-50/50',
+                        isItemOverdue && !isChecked && 'bg-rose-50/20'
+                      )}
+                      onClick={() => setSelectedRequest(req)}
+                    >
+                      {/* Checkbox */}
+                      <td className="py-3.5 pl-4 pr-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => handleToggleSelect(req.id, e)}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+
+                      {/* ID */}
+                      <td className="py-3.5 px-3 font-mono font-bold text-blue-700">
+                        {req.id}
+                      </td>
+
+                      {/* Elector */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-extrabold text-slate-900">
+                          {req.elector_name}
                         </div>
-                      )}
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {req.gender} • {req.age} yrs
-                      </div>
-                    </td>
-
-                    {/* Relative */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-800">
-                        {req.relative_name}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        ({req.relation_type})
-                      </div>
-                    </td>
-
-                    {/* Location */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">
-                        {req.taluk} Taluk
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {req.city} • {req.district}
-                      </div>
-                    </td>
-
-                    {/* Contact */}
-                    <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`tel:${req.mobile}`}
-                          className="inline-flex items-center gap-1 font-mono font-bold text-slate-800 hover:text-sky-600"
-                          title="Call voter"
-                        >
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          <span>+91 {req.mobile}</span>
-                        </a>
-                        <a
-                          href={`https://wa.me/91${req.whatsapp || req.mobile}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                          title="Chat on WhatsApp"
-                        >
-                          <MessageSquare className="w-3 h-3" />
-                        </a>
-                      </div>
-                    </td>
-
-                    {/* Category */}
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700">
-                        {req.category}
-                      </span>
-                    </td>
-
-                    {/* Status Badge */}
-                    <td className="py-3.5 px-4">
-                      {req.status === 'pending' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                          Pending
-                        </span>
-                      )}
-                      {req.status === 'in_review' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-100 text-sky-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                          In Review
-                        </span>
-                      )}
-                      {req.status === 'approved' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          Approved
-                        </span>
-                      )}
-                      {req.status === 'rejected' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800">
-                          <X className="w-3 h-3 text-rose-600" />
-                          Rejected
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {req.status !== 'approved' && (
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(req.id, 'approved')}
-                            className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 active:bg-emerald-200 transition font-bold"
-                            title="Approve & Enroll"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
+                        {req.elector_name_kannada && (
+                          <div className="text-[11px] text-slate-500">
+                            {req.elector_name_kannada}
+                          </div>
                         )}
-                        {req.status !== 'rejected' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRejectionTargetId(req.id);
-                              setIsRejectModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 active:bg-rose-200 transition font-bold"
-                            title="Reject Request"
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          {req.gender} • {req.age ? `${req.age} yrs` : 'Grad voter'}
+                        </div>
+                      </td>
+
+                      {/* Relative */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-slate-800">
+                          {req.relative_name}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          ({req.relation_type})
+                        </div>
+                      </td>
+
+                      {/* Location */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900">
+                          {req.taluk}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {req.city ? `${req.city} • ` : ''}{req.district}
+                        </div>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`tel:${req.mobile}`}
+                            className="inline-flex items-center gap-1 font-mono font-bold text-slate-800 hover:text-blue-600"
+                            title="Call voter"
                           >
-                            <X className="w-4 h-4" />
-                          </button>
+                            <Phone className="w-3 h-3 text-slate-400" />
+                            <span>+91 {req.mobile}</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/91${req.whatsapp || req.mobile}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                            title="Chat on WhatsApp"
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </td>
+
+                      {/* SLA Due */}
+                      <td className="py-3.5 px-4">
+                        {isItemOverdue ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-rose-100 text-rose-800 animate-pulse">
+                            <AlertCircle className="w-3 h-3" />
+                            Overdue
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            {new Date(req.sla_due_at).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
                         )}
+                      </td>
+
+                      {/* Status Badge */}
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider',
+                            cfg.badgeVariant === 'primary' && 'bg-blue-100 text-blue-800',
+                            cfg.badgeVariant === 'indigo' && 'bg-indigo-100 text-indigo-800',
+                            cfg.badgeVariant === 'success' && 'bg-emerald-100 text-emerald-800',
+                            cfg.badgeVariant === 'warning' && 'bg-amber-100 text-amber-800',
+                            cfg.badgeVariant === 'error' && 'bg-rose-100 text-rose-800',
+                            cfg.badgeVariant === 'secondary' && 'bg-slate-100 text-slate-700'
+                          )}
+                        >
+                          {req.status === 'enrolled' && <Check className="w-3 h-3 text-emerald-600" />}
+                          {req.status === 'rejected' && <X className="w-3 h-3 text-rose-600" />}
+                          <span>{cfg.publicStepLabel.en}</span>
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => setSelectedRequest(req)}
-                          className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition font-bold"
-                          title="View Details"
+                          className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition font-bold text-xs inline-flex items-center gap-1"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Manage</span>
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -680,365 +852,94 @@ export default function AdminRequestsPage() {
         {/* Requests Mobile Cards List */}
         <div className="block md:hidden divide-y divide-slate-100">
           {filteredRequests.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 space-y-2">
-              <ClipboardList className="w-8 h-8 text-slate-300 mx-auto" />
-              <p className="font-semibold text-slate-600">No requests found</p>
+            <div className="p-8 text-center text-slate-400 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto text-blue-600">
+                <ClipboardList className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-extrabold text-sm text-slate-800">No Requests Found</p>
+                <p className="text-xs text-slate-500 mt-0.5">Adjust search criteria or check live sync.</p>
+              </div>
             </div>
           ) : (
-            filteredRequests.map((req) => (
-              <div
-                key={req.id}
-                onClick={() => setSelectedRequest(req)}
-                className="p-4 space-y-2.5 active:bg-slate-50 transition"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-xs text-sky-700">
-                    {req.id}
-                  </span>
-                  {/* Status Badge */}
-                  {req.status === 'pending' && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-100 text-amber-800">
-                      Pending
-                    </span>
-                  )}
-                  {req.status === 'in_review' && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-sky-100 text-sky-800">
-                      In Review
-                    </span>
-                  )}
-                  {req.status === 'approved' && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-800">
-                      Approved
-                    </span>
-                  )}
-                  {req.status === 'rejected' && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-100 text-rose-800">
-                      Rejected
-                    </span>
-                  )}
-                </div>
+            filteredRequests.map((req) => {
+              const isItemOverdue =
+                !['enrolled', 'rejected', 'duplicate', 'closed', 'withdrawn'].includes(req.status) &&
+                new Date(req.sla_due_at).getTime() < nowTime;
+              const cfg = getStatusConfig(req.status);
 
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-900 leading-tight">
-                    {req.elector_name}
-                  </h4>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {req.relation_type}: {req.relative_name} • {req.gender}, {req.age}y
-                  </p>
-                </div>
-
-                <div className="text-xs text-slate-600 flex items-center gap-1 font-semibold">
-                  <MapPin className="w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
-                  <span>
-                    {req.taluk} Taluk, {req.city} ({req.district})
-                  </span>
-                </div>
-
-                {/* Mobile Action Ribbon */}
+              return (
                 <div
-                  className="flex items-center justify-between pt-1 border-t border-slate-100"
-                  onClick={(e) => e.stopPropagation()}
+                  key={req.id}
+                  onClick={() => setSelectedRequest(req)}
+                  className={cn(
+                    'p-4 space-y-2.5 active:bg-blue-50/50 transition cursor-pointer',
+                    isItemOverdue && 'bg-rose-50/20'
+                  )}
                 >
-                  <a
-                    href={`tel:${req.mobile}`}
-                    className="inline-flex items-center gap-1 text-xs font-mono font-bold text-slate-800"
-                  >
-                    <Phone className="w-3 h-3 text-slate-400" />
-                    <span>+91 {req.mobile}</span>
-                  </a>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-xs text-blue-700">
+                      {req.id}
+                    </span>
+                    <span
+                      className={cn(
+                        'px-2 py-0.5 rounded-full text-[10px] font-black uppercase',
+                        cfg.badgeVariant === 'primary' && 'bg-blue-100 text-blue-800',
+                        cfg.badgeVariant === 'indigo' && 'bg-indigo-100 text-indigo-800',
+                        cfg.badgeVariant === 'success' && 'bg-emerald-100 text-emerald-800',
+                        cfg.badgeVariant === 'warning' && 'bg-amber-100 text-amber-800',
+                        cfg.badgeVariant === 'error' && 'bg-rose-100 text-rose-800',
+                        cfg.badgeVariant === 'secondary' && 'bg-slate-100 text-slate-700'
+                      )}
+                    >
+                      {cfg.publicStepLabel.en}
+                    </span>
+                  </div>
 
-                  <div className="flex items-center gap-2">
-                    {req.status !== 'approved' && (
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(req.id, 'approved')}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs"
-                      >
-                        Approve
-                      </button>
-                    )}
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">
+                      {req.elector_name}
+                    </h3>
+                    <div className="text-xs text-slate-500">
+                      {req.taluk} Taluk • {req.district}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs font-mono text-slate-700">+91 {req.mobile}</span>
                     <button
                       type="button"
-                      onClick={() => setSelectedRequest(req)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs"
+                      className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs"
                     >
-                      Details
+                      Manage &rarr;
                     </button>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* Request Details Drawer / Modal */}
-      {selectedRequest && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn">
-          <div
-            className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-sky-100 overflow-hidden my-auto max-h-[92vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-5 bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-200/80 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-xs text-sky-800">
-                    {selectedRequest.id}
-                  </span>
-                  <span
-                    className={cn(
-                      'px-2 py-0.5 rounded-full text-[10px] font-black uppercase',
-                      selectedRequest.status === 'approved' && 'bg-emerald-100 text-emerald-800',
-                      selectedRequest.status === 'pending' && 'bg-amber-100 text-amber-800',
-                      selectedRequest.status === 'in_review' && 'bg-sky-100 text-sky-800',
-                      selectedRequest.status === 'rejected' && 'bg-rose-100 text-rose-800'
-                    )}
-                  >
-                    {selectedRequest.status}
-                  </span>
-                </div>
-                <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
-                  {selectedRequest.elector_name}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedRequest(null)}
-                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Content Details */}
-            <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-700 flex-1">
-              {/* Personal Info Grid */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Voter Identification
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500 block">Relative Name:</span>
-                    <strong className="text-slate-900">{selectedRequest.relative_name} ({selectedRequest.relation_type})</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Gender &amp; Age:</span>
-                    <strong className="text-slate-900">{selectedRequest.gender}, {selectedRequest.age} years</strong>
-                  </div>
-                  {selectedRequest.existing_epic && (
-                    <div>
-                      <span className="text-slate-500 block">Existing EPIC:</span>
-                      <strong className="text-sky-700 font-mono">{selectedRequest.existing_epic}</strong>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-slate-500 block">Category:</span>
-                    <strong className="text-slate-900">{selectedRequest.category}</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Location Grid */}
-              <div className="bg-sky-50/60 p-4 rounded-2xl border border-sky-100 space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-sky-800">
-                  Constituency Location
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500 block">District:</span>
-                    <strong className="text-slate-900">{selectedRequest.district}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Taluk:</span>
-                    <strong className="text-slate-900">{selectedRequest.taluk}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">City / Town / Ward:</span>
-                    <strong className="text-slate-900">{selectedRequest.city}</strong>
-                  </div>
-                  {selectedRequest.polling_station && (
-                    <div>
-                      <span className="text-slate-500 block">Polling Station:</span>
-                      <strong className="text-slate-900">{selectedRequest.polling_station}</strong>
-                    </div>
-                  )}
-                </div>
-
-                {selectedRequest.address && (
-                  <div className="pt-2 border-t border-sky-200/60 text-xs">
-                    <span className="text-slate-500 block">Residential Address:</span>
-                    <span className="font-semibold text-slate-800">
-                      {selectedRequest.address} {selectedRequest.pincode ? `- ${selectedRequest.pincode}` : ''}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Contact Info */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Contact &amp; Submission
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500 block">Mobile:</span>
-                    <a href={`tel:${selectedRequest.mobile}`} className="font-mono font-bold text-sky-700 underline">
-                      +91 {selectedRequest.mobile}
-                    </a>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">WhatsApp:</span>
-                    <a
-                      href={`https://wa.me/91${selectedRequest.whatsapp || selectedRequest.mobile}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-mono font-bold text-emerald-700 underline"
-                    >
-                      +91 {selectedRequest.whatsapp || selectedRequest.mobile}
-                    </a>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Submitted By:</span>
-                    <strong className="text-slate-900">{selectedRequest.applicant_type}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Submission Date:</span>
-                    <span className="text-slate-700 font-medium">
-                      {new Date(selectedRequest.created_at).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedRequest.notes && (
-                  <div className="pt-2 border-t border-slate-200/80 text-xs">
-                    <span className="text-slate-500 block">Notes / Remarks:</span>
-                    <p className="text-slate-800 italic bg-white p-2 rounded-lg border border-slate-200">
-                      "{selectedRequest.notes}"
-                    </p>
-                  </div>
-                )}
-
-                {selectedRequest.rejection_reason && (
-                  <div className="pt-2 border-t border-rose-200 text-xs">
-                    <span className="text-rose-600 font-bold block">Rejection Reason:</span>
-                    <p className="text-rose-800 bg-rose-50 p-2 rounded-lg border border-rose-200">
-                      {selectedRequest.rejection_reason}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Status Change Footer Controls */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-slate-500 font-medium">
-                Change Status:
-              </span>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isUpdatingStatus || selectedRequest.status === 'in_review'}
-                  onClick={() => handleUpdateStatus(selectedRequest.id, 'in_review')}
-                  className="px-3 py-1.5 rounded-xl border border-sky-300 text-sky-800 hover:bg-sky-50 font-bold text-xs disabled:opacity-50"
-                >
-                  Mark In Review
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isUpdatingStatus || selectedRequest.status === 'approved'}
-                  onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs disabled:opacity-50"
-                >
-                  Approve &amp; Enroll
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isUpdatingStatus || selectedRequest.status === 'rejected'}
-                  onClick={() => {
-                    setRejectionTargetId(selectedRequest.id);
-                    setIsRejectModalOpen(true);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 font-bold text-xs disabled:opacity-50"
-                >
-                  Reject
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reject Reason Confirmation Modal */}
-      {isRejectModalOpen && rejectionTargetId && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl border border-rose-100 space-y-4">
-            <div className="flex items-center gap-2 text-rose-700">
-              <AlertCircle className="w-5 h-5 text-rose-600" />
-              <h4 className="text-base font-black">Reject Addition Request</h4>
-            </div>
-
-            <p className="text-xs text-slate-600">
-              Please specify the reason for rejecting request{' '}
-              <strong className="font-mono text-slate-900">{rejectionTargetId}</strong>:
-            </p>
-
-            <select
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-            >
-              <option value="Duplicate entry detected in existing electoral roll">
-                Duplicate entry detected in existing electoral roll
-              </option>
-              <option value="Invalid or unverifiable address / out of constituency">
-                Invalid or unverifiable address / out of constituency
-              </option>
-              <option value="Incomplete applicant documentation (Age / Identity proof)">
-                Incomplete applicant documentation (Age / Identity proof)
-              </option>
-              <option value="Under-age elector (less than 18 years on qualifying date)">
-                Under-age elector (less than 18 years on qualifying date)
-              </option>
-              <option value="Duplicate EPIC card number already registered">
-                Duplicate EPIC card number already registered
-              </option>
-              <option value="Other / Contact details unreachable">
-                Other / Contact details unreachable
-              </option>
-            </select>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRejectModalOpen(false);
-                  setRejectionTargetId(null);
-                }}
-                className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                disabled={isUpdatingStatus}
-                onClick={() =>
-                  handleUpdateStatus(rejectionTargetId, 'rejected', rejectionReason)
-                }
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
-              >
-                Confirm Rejection
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Admin Request Detail Drawer */}
+      <AdminRequestDetailDrawer
+        isOpen={Boolean(selectedRequest)}
+        onClose={() => setSelectedRequest(null)}
+        request={selectedRequest}
+        userRole={userRole}
+        onStatusUpdated={(updated) => {
+          setRequests((prev) =>
+            prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r))
+          );
+          setSelectedRequest(updated);
+          fetchRequests(true);
+        }}
+        onRequestDeleted={(deletedId) => {
+          setRequests((prev) => prev.filter((r) => r.id !== deletedId));
+          setSelectedRequest(null);
+          fetchRequests(false);
+        }}
+      />
 
       {/* Add Request Modal */}
       <RequestAddVoterModal

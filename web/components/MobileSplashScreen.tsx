@@ -11,14 +11,19 @@ interface MobileSplashScreenProps {
    */
   durationMs?: number;
   /**
-   * If true, always force show the splash screen (useful for testing or manual trigger)
+   * If true, force show the splash screen even if previously shown
    */
   forceShow?: boolean;
+  /**
+   * Callback fired when the splash dismiss animation finishes
+   */
+  onDismiss?: () => void;
 }
 
 export default function MobileSplashScreen({
   durationMs = 2600,
   forceShow = false,
+  onDismiss,
 }: MobileSplashScreenProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -29,15 +34,17 @@ export default function MobileSplashScreen({
     // Only run on client
     if (typeof window === 'undefined') return;
 
-    // Only show on mobile devices (width < 640px)
+    // Strictly enforce mobile view (viewport width < 640px)
     const isMobile = window.innerWidth < 640;
-    if (!isMobile && !forceShow) {
+    if (!isMobile) {
+      if (onDismiss) onDismiss();
       return;
     }
 
     // Check if already displayed in current session
     const hasSeenSplash = sessionStorage.getItem('electoral_splash_shown');
     if (hasSeenSplash && !forceShow) {
+      if (onDismiss) onDismiss();
       return;
     }
 
@@ -70,7 +77,7 @@ export default function MobileSplashScreen({
       clearTimeout(timer3);
       clearTimeout(timer4);
     };
-  }, [durationMs, forceShow]);
+  }, [durationMs, forceShow, onDismiss]);
 
   const handleDismiss = () => {
     setIsExiting(true);
@@ -80,6 +87,9 @@ export default function MobileSplashScreen({
     // Remove from DOM after exit animation finishes (550ms)
     setTimeout(() => {
       setIsVisible(false);
+      if (onDismiss) {
+        onDismiss();
+      }
     }, 550);
   };
 

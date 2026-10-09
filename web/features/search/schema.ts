@@ -6,6 +6,7 @@ export const searchQuerySchema = z.object({
   part: z.string().trim().optional().default(''),
   ac: z.string().trim().optional().default(''),
   district: z.string().trim().optional().default(''),
+  taluk: z.string().trim().optional().default(''),
   village: z.string().trim().optional().default(''),
   fuzzy: z.coerce.boolean().optional().default(false),
   page: z.coerce.number().int().min(1, 'Page must be at least 1').default(1),

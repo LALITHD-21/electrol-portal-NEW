@@ -1,98 +1,149 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   X,
-  UserPlus,
   CheckCircle2,
   Copy,
   Check,
   Share2,
-  MapPin,
-  Phone,
-  User,
-  FileText,
+  ChevronDown,
   AlertCircle,
   Loader2,
-  Building,
   Sparkles,
 } from 'lucide-react';
 import {
   CONSTITUENCY_DISTRICTS,
-  getTaluksByDistrict,
-  getCitiesByTaluk,
+  getHoblisByTaluk,
+  getAllTaluks,
 } from '@/lib/constituencyData';
 import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export interface RequestAddVoterModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (request: any) => void;
+  mode?: 'add' | 'correction';
+  initialData?: {
+    fullName?: string;
+    relativeName?: string;
+    epicNumber?: string;
+    taluk?: string;
+    hobli?: string;
+    villageArea?: string;
+    address?: string;
+  } | null;
 }
 
 export function RequestAddVoterModal({
   isOpen,
   onClose,
   onSuccess,
+  mode = 'add',
+  initialData,
 }: RequestAddVoterModalProps) {
-  // Form state
-  const [district, setDistrict] = useState('Tumkur');
-  const [taluk, setTaluk] = useState('Tumkur');
-  const [city, setCity] = useState('Tumkur City');
-  const [customCity, setCustomCity] = useState('');
-  const [electorName, setElectorName] = useState('');
-  const [electorNameKannada, setElectorNameKannada] = useState('');
-  const [relativeName, setRelativeName] = useState('');
-  const [relationType, setRelationType] = useState('Father');
-  const [gender, setGender] = useState('Male');
-  const [age, setAge] = useState('');
-  const [existingEpic, setExistingEpic] = useState('');
-  const [pollingStation, setPollingStation] = useState('');
-  const [address, setAddress] = useState('');
-  const [pincode, setPincode] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [sameAsMobile, setSameAsMobile] = useState(true);
-  const [applicantType, setApplicantType] = useState('Self');
-  const [category, setCategory] = useState('New Registration (Form 6)');
-  const [notes, setNotes] = useState('');
+  const { language, t } = useLanguage();
+  // Form fields matching reference screenshots
+  const [fullName, setFullName] = useState(initialData?.fullName || '');
+  const [relativeName, setRelativeName] = useState(initialData?.relativeName || '');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [qualification, setQualification] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [talukCity, setTalukCity] = useState(initialData?.taluk || 'Tumkur City');
+  const [hobliWard, setHobliWard] = useState(initialData?.hobli || 'Ward 1-10');
+  const [villageArea, setVillageArea] = useState(initialData?.villageArea || '');
+  const [address, setAddress] = useState(initialData?.address || '');
+  const [epicNumber, setEpicNumber] = useState(initialData?.epicNumber || '');
+  const [anythingElse, setAnythingElse] = useState('');
 
-  // UI status
+  // Sync initialData when modal opens
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.fullName) setFullName(initialData.fullName);
+      if (initialData.relativeName) setRelativeName(initialData.relativeName);
+      if (initialData.epicNumber) setEpicNumber(initialData.epicNumber);
+      if (initialData.taluk) setTalukCity(initialData.taluk);
+      if (initialData.hobli) setHobliWard(initialData.hobli);
+      if (initialData.villageArea) setVillageArea(initialData.villageArea);
+      if (initialData.address) setAddress(initialData.address);
+    }
+  }, [initialData, isOpen]);
+
+  // UI state
+  const [isTalukPickerOpen, setIsTalukPickerOpen] = useState(false);
+  const [isHobliPickerOpen, setIsHobliPickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submittedData, setSubmittedData] = useState<any | null>(null);
   const [copiedId, setCopiedId] = useState(false);
 
-  // Dynamic taluk & city lists
-  const availableTaluks = getTaluksByDistrict(district);
-  const availableCities = getCitiesByTaluk(district, taluk);
+  // Grouped taluks for the picker
+  const allTalukList = [
+    // Tumkur
+    'Tumkur City',
+    'Tumkur Rural',
+    'Chikkanayakanahalli',
+    'Gubbi',
+    'Koratagere',
+    'Kunigal',
+    'Madhugiri',
+    'Pavagada',
+    'Sira',
+    'Tiptur',
+    'Turuvekere',
+    // Chitradurga
+    'Chitradurga',
+    'Challakere',
+    'Hiriyur',
+    'Holalkere',
+    'Hosadurga',
+    'Molakalmuru',
+    // Davanagere
+    'Davanagere',
+    'Harihar',
+    'Channagiri',
+    'Honnali',
+    'Jagalur',
+    'Nyamathi',
+    // Kolar
+    'Kolar',
+    'Bangarapet',
+    'KGF',
+    'Malur',
+    'Mulbagal',
+    'Srinivaspur',
+    // Chikkaballapura
+    'Chikkaballapur',
+    'Bagepalli',
+    'Chintamani',
+    'Gauribidanur',
+    'Gudibanda',
+    'Sidlaghatta',
+  ];
 
-  // Update taluk when district changes
-  useEffect(() => {
-    const taluks = getTaluksByDistrict(district);
-    if (taluks.length > 0) {
-      setTaluk(taluks[0].name);
-      const cities = getCitiesByTaluk(district, taluks[0].name);
-      setCity(cities[0] || 'Main Town');
+  // Derive District from chosen Taluk
+  const getDistrictForTaluk = (taluk: string): string => {
+    for (const dist of CONSTITUENCY_DISTRICTS) {
+      if (dist.taluks.some((t) => t.name.toLowerCase() === taluk.toLowerCase())) {
+        return dist.name;
+      }
     }
-  }, [district]);
+    return 'Tumkur';
+  };
 
-  // Update city when taluk changes
+  const currentDistrict = getDistrictForTaluk(talukCity);
+  const availableHoblis = getHoblisByTaluk(currentDistrict, talukCity);
+
   useEffect(() => {
-    const cities = getCitiesByTaluk(district, taluk);
-    if (cities.length > 0) {
-      setCity(cities[0]);
+    if (availableHoblis.length > 0) {
+      setHobliWard(availableHoblis[0]);
     } else {
-      setCity('Main Town');
+      setHobliWard('Kasaba');
     }
-  }, [taluk]);
-
-  // Keep WhatsApp synced if checkbox is active
-  useEffect(() => {
-    if (sameAsMobile) {
-      setWhatsapp(mobile);
-    }
-  }, [mobile, sameAsMobile]);
+  }, [talukCity]);
 
   if (!isOpen) return null;
 
@@ -100,22 +151,19 @@ export function RequestAddVoterModal({
     e.preventDefault();
     setError(null);
 
-    // Validation
-    if (!electorName.trim()) {
-      setError('Please enter the voter’s full name');
+    if (!fullName.trim()) {
+      setError('Please enter your full name');
       return;
     }
-    if (!relativeName.trim()) {
-      setError('Please enter Father / Husband / Guardian’s name');
-      return;
-    }
-    const cleanMobile = mobile.replace(/\D/g, '');
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
     if (cleanMobile.length !== 10) {
       setError('Please provide a valid 10-digit mobile number');
       return;
     }
-
-    const finalCity = city === '__custom__' ? customCity.trim() || 'Town/Ward' : city;
+    if (!qualification.trim()) {
+      setError('Please provide your educational qualification (e.g. BA, BE, MSc B.Ed)');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -123,24 +171,22 @@ export function RequestAddVoterModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          elector_name: electorName,
-          elector_name_kannada: electorNameKannada,
-          relative_name: relativeName,
-          relation_type: relationType,
-          gender,
-          age: Number(age) || 18,
-          existing_epic: existingEpic,
-          district,
-          taluk,
-          city: finalCity,
-          polling_station: pollingStation,
-          address,
-          pincode,
+          elector_name: fullName.trim(),
+          relative_name: relativeName.trim(),
+          relation_type: 'Father',
+          gender: 'Male',
+          age: 21,
           mobile: cleanMobile,
-          whatsapp: sameAsMobile ? cleanMobile : whatsapp.replace(/\D/g, '') || cleanMobile,
-          applicant_type: applicantType,
-          category,
-          notes,
+          qualification: qualification.trim(),
+          occupation: occupation.trim(),
+          district: currentDistrict,
+          taluk: talukCity,
+          hobli: hobliWard,
+          village: villageArea.trim(),
+          address: address.trim(),
+          existing_epic: epicNumber.trim().toUpperCase(),
+          category: mode === 'correction' ? 'Correction in Roll' : 'Graduates / Teachers Enrollment',
+          notes: mode === 'correction' ? `[CORRECTION REQUEST] ${anythingElse.trim()}` : anythingElse.trim(),
         }),
       });
 
@@ -167,108 +213,105 @@ export function RequestAddVoterModal({
 
   const handleShareWhatsApp = () => {
     if (!submittedData) return;
-    const text = `*Karnataka Electoral Roll - Voter Addition Request Received*\n\n` +
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const trackUrl = `${origin}/track?ref=${encodeURIComponent(submittedData.id)}`;
+    const text = `*Karnataka Electoral Roll - Voter Enrolment Request*\n\n` +
       `📋 *Tracking ID:* ${submittedData.id}\n` +
-      `👤 *Voter Name:* ${submittedData.elector_name}\n` +
-      `📍 *Location:* ${submittedData.taluk} Taluk, ${submittedData.district} Dist\n` +
-      `🏙️ *City/Ward:* ${submittedData.city}\n` +
-      `📞 *Contact:* +91 ${submittedData.mobile}\n` +
-      `📌 *Category:* ${submittedData.category}\n` +
-      `⏳ *Status:* Pending Verification\n\n` +
-      `Your request has been submitted to the Electoral Team for official roll verification.`;
+      `👤 *Full Name:* ${submittedData.elector_name}\n` +
+      `🎓 *Qualification:* ${submittedData.qualification || 'Graduate'}\n` +
+      `📍 *Location:* ${submittedData.taluk}, ${submittedData.district}\n` +
+      `📞 *Mobile:* +91 ${submittedData.mobile}\n` +
+      `⏳ *Status:* Request Received (Pending Verification)\n\n` +
+      `🔍 *Track progress live:* ${trackUrl}\n\n` +
+      `Our team will verify and call to assist with official Form 18 submission.`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handleResetForm = () => {
     setSubmittedData(null);
-    setElectorName('');
-    setElectorNameKannada('');
+    setFullName('');
     setRelativeName('');
-    setAge('');
-    setExistingEpic('');
-    setPollingStation('');
+    setMobileNumber('');
+    setQualification('');
+    setOccupation('');
+    setVillageArea('');
     setAddress('');
-    setPincode('');
-    setMobile('');
-    setWhatsapp('');
-    setNotes('');
+    setEpicNumber('');
+    setAnythingElse('');
     setError(null);
   };
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-modal flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn">
       <div
-        className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-sky-100 overflow-hidden my-auto max-h-[92vh] flex flex-col"
+        className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-sky-100 overflow-hidden max-h-[92vh] flex flex-col animate-slideUp sm:animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Bar - Light Blue Brand Palette */}
-        <div className="relative px-5 py-4 bg-gradient-to-r from-sky-50 via-sky-100/70 to-blue-50 border-b border-sky-200/80 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-300 text-sky-700 flex items-center justify-center shadow-2xs">
-              <UserPlus className="w-5 h-5 text-sky-700" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                  Request to Add Voter
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-600 text-white">
-                  Form 6 / Roll
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 font-medium">
-                ಹೊಸ ಮತದಾರರ ಸೇರ್ಪಡೆ ಕೋರಿಕೆ • Karnataka Legislative Council Roll
-              </p>
-            </div>
+        {/* Drag handle on mobile */}
+        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-2.5 sm:hidden" />
+
+        {/* Modal Header */}
+        <div className="px-5 pt-3 pb-3 sm:py-4 flex items-start justify-between border-b border-slate-100">
+          <div>
+            <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 leading-tight">
+              {mode === 'correction'
+                ? (language === 'kn' ? 'ಮತದಾರರ ವಿವರ ತಿದ್ದುಪಡಿಗೆ ವಿನಂತಿ' : 'Request a correction')
+                : (language === 'kn' ? 'ಹೆಸರು ಸೇರಿಸಲು ವಿನಂತಿ (ನಮೂನೆ 18)' : 'Request to add my name')}
+            </h3>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              {language === 'kn'
+                ? 'ದೃಢೀಕರಣಕ್ಕಾಗಿ ನಮ್ಮ ತಂಡವು ಈ ಸಂಖ್ಯೆಗೆ ಕರೆ ಮಾಡಲಿದೆ.'
+                : 'Our team will call you on this number to verify.'}
+            </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close modal"
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-white/80 active:bg-slate-200 rounded-xl transition min-h-[40px] min-w-[40px] flex items-center justify-center"
+            aria-label="Close"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-slate-800">
+        <div className="p-5 overflow-y-auto space-y-4 flex-1 text-slate-800">
           {submittedData ? (
-            /* Success Feedback View */
-            <div className="text-center py-4 space-y-6 animate-scaleIn">
-              <div className="w-16 h-16 rounded-3xl bg-emerald-100 border-2 border-emerald-300 text-emerald-600 mx-auto flex items-center justify-center shadow-sm">
+            /* Success Feedback */
+            <div className="text-center py-4 space-y-5 animate-scaleIn">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-100 border-2 border-emerald-300 text-emerald-600 mx-auto flex items-center justify-center shadow-xs">
                 <CheckCircle2 className="w-10 h-10 text-emerald-600" />
               </div>
 
-              <div className="space-y-1">
-                <h4 className="text-xl font-black text-slate-900">
+              <div>
+                <h4 className="text-lg font-black text-slate-900">
                   Request Submitted Successfully!
                 </h4>
-                <p className="text-xs text-slate-600 max-w-md mx-auto">
-                  Your voter addition request has been queued for verification by the electoral desk.
+                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                  Our election desk has recorded your application.
                 </p>
               </div>
 
               {/* Reference ID Pill */}
-              <div className="bg-sky-50/80 border border-sky-200 rounded-2xl p-4 max-w-sm mx-auto flex items-center justify-between gap-3 shadow-2xs">
+              <div className="bg-sky-50 border border-sky-200 rounded-2xl p-3.5 max-w-xs mx-auto flex items-center justify-between gap-3 shadow-2xs">
                 <div className="text-left">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700 block">
-                    Tracking Reference ID
+                    Reference ID
                   </span>
-                  <span className="text-lg font-black font-mono text-slate-900">
+                  <span className="text-base font-black font-mono text-slate-900">
                     {submittedData.id}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyId}
-                  className="px-3 py-1.5 bg-white border border-sky-300 text-sky-700 hover:bg-sky-50 active:bg-sky-100 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                  className="px-3 py-1.5 bg-white border border-sky-300 text-sky-700 hover:bg-sky-50 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
                 >
                   {copiedId ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-700">Copied</span>
+                      <span>Copied</span>
                     </>
                   ) : (
                     <>
@@ -279,466 +322,336 @@ export function RequestAddVoterModal({
                 </button>
               </div>
 
-              {/* Summary Card */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-2 max-w-md mx-auto">
-                <div className="flex justify-between border-b border-slate-200/80 pb-1.5">
-                  <span className="text-slate-500 font-semibold">Voter Name:</span>
-                  <span className="font-extrabold text-slate-900">{submittedData.elector_name}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-200/80 pb-1.5">
-                  <span className="text-slate-500 font-semibold">Location:</span>
-                  <span className="font-bold text-slate-800">
-                    {submittedData.taluk} Taluk, {submittedData.district} Dist
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-200/80 pb-1.5">
-                  <span className="text-slate-500 font-semibold">City / Ward:</span>
-                  <span className="font-bold text-slate-800">{submittedData.city}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-200/80 pb-1.5">
-                  <span className="text-slate-500 font-semibold">Mobile:</span>
-                  <span className="font-mono font-bold text-slate-800">+91 {submittedData.mobile}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Category:</span>
-                  <span className="font-bold text-sky-700">{submittedData.category}</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+                <Link
+                  href={`/track?ref=${encodeURIComponent(submittedData.id)}`}
+                  onClick={onClose}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md transition"
+                >
+                  <span>Track Status Live &rarr;</span>
+                </Link>
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-md transition"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition"
                 >
                   <Share2 className="w-4 h-4" />
-                  <span>Share Receipt on WhatsApp</span>
+                  <span>WhatsApp</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleResetForm}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-xs transition"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Add Another Voter</span>
+                  Add Another
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full sm:w-auto px-5 py-3 rounded-2xl text-slate-500 hover:text-slate-800 font-bold text-xs"
+                  className="w-full sm:w-auto px-4 py-2.5 text-slate-500 font-bold text-xs"
                 >
-                  Close
+                  Done
                 </button>
               </div>
             </div>
           ) : (
-            /* Input Form */
-            <form onSubmit={handleSubmit} className="space-y-6">
+            /* Input Form matching Image 2 & 3 */
+            <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex items-center gap-2.5">
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
                   <span>{error}</span>
                 </div>
               )}
 
-              {/* Section 1: Hierarchy (District -> Taluk -> City) */}
-              <div className="p-4 bg-sky-50/60 rounded-2xl border border-sky-100 space-y-3.5">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-sky-800">
-                  <MapPin className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Constituency Location Hierarchy (ಕರ್ನಾಟಕ ಕ್ಷೇತ್ರ)</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* District */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      District (ಜಿಲ್ಲೆ) <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-sky-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    >
-                      {CONSTITUENCY_DISTRICTS.map((d) => (
-                        <option key={d.name} value={d.name}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Taluk */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Taluk (ತಾಲೂಕು) <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={taluk}
-                      onChange={(e) => setTaluk(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-sky-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    >
-                      {availableTaluks.map((t) => (
-                        <option key={t.name} value={t.name}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* City / Town / Ward */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      City / Town / Ward (ನಗರ/ಗ್ರಾಮ) <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-sky-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    >
-                      {availableCities.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                      <option value="__custom__">+ Other / Type Specific Area</option>
-                    </select>
-                  </div>
-                </div>
-
-                {city === '__custom__' && (
-                  <div className="pt-1">
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Specify City / Village Name:
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ward 12, Sira Gate, Gubbi Extension"
-                      value={customCity}
-                      onChange={(e) => setCustomCity(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-sky-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[40px]"
-                    />
-                  </div>
-                )}
+              {/* Full name * */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Full name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+                />
               </div>
 
-              {/* Section 2: Personal Details */}
-              <div className="space-y-3.5">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700">
-                  <User className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Elector Personal Details (ವ್ಯಕ್ತಿ ವಿವರ)</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Full Name */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Full Name (English) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Ramesh Gowda"
-                      value={electorName}
-                      onChange={(e) => setElectorName(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    />
-                  </div>
-
-                  {/* Kannada Name (Optional) */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Name in Kannada (ಐಚ್ಛಿಕ)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="ಉದಾ: ರಮೇಶ್ ಗೌಡ"
-                      value={electorNameKannada}
-                      onChange={(e) => setElectorNameKannada(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  {/* Relative Name */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Relative's Full Name <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Father / Husband / Mother's Name"
-                      value={relativeName}
-                      onChange={(e) => setRelativeName(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    />
-                  </div>
-
-                  {/* Relation Type */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Relationship
-                    </label>
-                    <select
-                      value={relationType}
-                      onChange={(e) => setRelationType(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    >
-                      <option value="Father">Father (ತಂದೆ)</option>
-                      <option value="Husband">Husband (ಪತಿ)</option>
-                      <option value="Mother">Mother (ತಾಯಿ)</option>
-                      <option value="Guardian">Guardian (ಪೋಷಕರು)</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                  {/* Gender */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Gender <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    >
-                      <option value="Male">Male (ಪುರುಷ)</option>
-                      <option value="Female">Female (ಮಹಿಳೆ)</option>
-                      <option value="Third Gender">Third Gender</option>
-                    </select>
-                  </div>
-
-                  {/* Age */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Age (ವಯಸ್ಸು) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="18"
-                      max="110"
-                      required
-                      placeholder="e.g. 24"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    />
-                  </div>
-
-                  {/* Existing EPIC (Optional) */}
-                  <div className="col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Existing EPIC Card (if any)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. TYA0633792"
-                      value={existingEpic}
-                      onChange={(e) => setExistingEpic(e.target.value.toUpperCase())}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-semibold uppercase text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    />
-                  </div>
-                </div>
+              {/* Father / Mother / Husband */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Father / Mother / Husband
+                </label>
+                <input
+                  type="text"
+                  value={relativeName}
+                  onChange={(e) => setRelativeName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+                />
               </div>
 
-              {/* Section 3: Contact Details */}
-              <div className="space-y-3.5">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700">
-                  <Phone className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Contact & Communication (ಸಂಪರ್ಕ ಮಾಹಿತಿ)</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Mobile Number */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      10-Digit Mobile Number <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
-                        +91
-                      </span>
-                      <input
-                        type="tel"
-                        required
-                        maxLength={10}
-                        placeholder="9845123456"
-                        value={mobile}
-                        onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                        className="w-full pl-11 pr-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* WhatsApp Number */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-bold text-slate-700">
-                        WhatsApp Number
-                      </label>
-                      <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-sky-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={sameAsMobile}
-                          onChange={(e) => setSameAsMobile(e.target.checked)}
-                          className="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5"
-                        />
-                        <span>Same as Mobile</span>
-                      </label>
-                    </div>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
-                        +91
-                      </span>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        disabled={sameAsMobile}
-                        placeholder="9845123456"
-                        value={sameAsMobile ? mobile : whatsapp}
-                        onChange={(e) => setWhatsapp(e.target.value.replace(/\D/g, ''))}
-                        className="w-full pl-11 pr-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-500 min-h-[42px]"
-                      />
-                    </div>
-                  </div>
-                </div>
+              {/* Mobile number * */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Mobile number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={10}
+                  placeholder=""
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+                />
               </div>
 
-              {/* Section 4: Address, Polling Station & Category */}
-              <div className="space-y-3.5">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700">
-                  <Building className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Address & Polling Booth (ವಿಳಾಸ ಮತ್ತು ಬೂತ್)</span>
-                </div>
+              {/* Qualification * */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Qualification <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="BA, BE, MSc B.Ed ..."
+                  value={qualification}
+                  onChange={(e) => setQualification(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+                />
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Category */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Enrollment Category
-                    </label>
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    >
-                      <option value="New Registration (Form 6)">New Registration (Form 6)</option>
-                      <option value="Graduates / Teachers Enrollment">Graduates / Teachers Roll (Form 18/19)</option>
-                      <option value="Constituency Transfer (Form 8)">Constituency Transfer (Form 8)</option>
-                      <option value="Correction in Roll">Correction in Roll Details</option>
-                    </select>
-                  </div>
+              {/* Occupation */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Occupation
+                </label>
+                <input
+                  type="text"
+                  value={occupation}
+                  onChange={(e) => setOccupation(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+                />
+              </div>
 
-                  {/* Submitter */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Submitted By
-                    </label>
-                    <select
-                      value={applicantType}
-                      onChange={(e) => setApplicantType(e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    >
-                      <option value="Self">Self (Voter Directly)</option>
-                      <option value="Party Worker / Agent">Party Worker / BL Agent</option>
-                      <option value="Family Member">Family Member</option>
-                      <option value="Citizen Volunteer">Citizen Volunteer</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Polling Station Name or Area */}
+              {/* Taluk / City & Hobli / Ward side-by-side */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Taluk / City selector */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Nearest Polling Station / Landmark / School (ಐಚ್ಛಿಕ)
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Taluk / City
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Govt Higher Primary School Room 1, Harihar"
-                    value={pollingStation}
-                    onChange={(e) => setPollingStation(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsTalukPickerOpen(true)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 text-left flex items-center justify-between min-h-[44px] hover:border-slate-300 transition"
+                  >
+                    <span className="truncate">{talukCity}</span>
+                    <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  {/* Street Address */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      House / Door No & Street Address
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. #42, Main Road, Near Temple"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    />
-                  </div>
-
-                  {/* Pincode */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Pincode
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      placeholder="572104"
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[42px]"
-                    />
-                  </div>
-                </div>
-
-                {/* Notes */}
+                {/* Hobli / Ward selector */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Additional Notes / Qualifications / Remarks (ಐಚ್ಛಿಕ)
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Hobli / Ward
                   </label>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Degree certificate verified, recently moved from rural ward..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsHobliPickerOpen(true)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 text-left flex items-center justify-between min-h-[44px] hover:border-slate-300 transition"
+                  >
+                    <span className="truncate">{hobliWard}</span>
+                    <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  </button>
                 </div>
               </div>
 
-              {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs transition"
-                >
-                  Cancel
-                </button>
+              {/* Village / Area */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Village / Area
+                </label>
+                <input
+                  type="text"
+                  value={villageArea}
+                  onChange={(e) => setVillageArea(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+                />
+              </div>
 
+              {/* Address */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Address
+                </label>
+                <textarea
+                  rows={2}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              {/* EPIC (Voter ID) number, if any */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  EPIC (Voter ID) number, if any
+                </label>
+                <input
+                  type="text"
+                  value={epicNumber}
+                  onChange={(e) => setEpicNumber(e.target.value.toUpperCase())}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold uppercase text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+                />
+              </div>
+
+              {/* Anything else we should know? */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Anything else we should know?
+                </label>
+                <textarea
+                  rows={2}
+                  value={anythingElse}
+                  onChange={(e) => setAnythingElse(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              {/* Submit request button (Full Width in Light Blue Theme) */}
+              <div className="pt-2 pb-2">
                 <Button
                   type="submit"
+                  fullWidth={true}
                   variant="primary"
                   specular={true}
                   lineColor="#38bdf8"
                   baseColor="#0284c7"
                   isLoading={isLoading}
-                  loadingText="Submitting..."
-                  leftIcon={<Sparkles className="w-4 h-4 text-sky-200" />}
-                  className="bg-gradient-to-r from-sky-600 to-blue-600 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-md hover:from-sky-700 hover:to-blue-700"
+                  loadingText={language === 'kn' ? 'ಸಲ್ಲಿಸಲಾಗುತ್ತಿದೆ...' : 'Submitting...'}
+                  className="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white font-black text-sm py-3.5 rounded-2xl shadow-md transition active:scale-98"
                 >
-                  Submit Voter Addition Request
+                  {mode === 'correction'
+                    ? (language === 'kn' ? 'ತಿದ್ದುಪಡಿ ಅರ್ಜಿ ಸಲ್ಲಿಸಿ' : 'Submit correction request')
+                    : (language === 'kn' ? 'ಅರ್ಜಿ ಸಲ್ಲಿಸಿ' : 'Submit request')}
                 </Button>
               </div>
             </form>
           )}
         </div>
       </div>
+
+      {/* Taluk / City Picker Bottom Sheet / Dialog (Matching Image 4 & 5) */}
+      {isTalukPickerOpen && (
+        <div
+          className="fixed inset-0 z-popover flex items-center justify-center p-4 bg-slate-950/70 animate-fadeIn"
+          onClick={() => setIsTalukPickerOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-slate-900 text-white rounded-3xl p-4 shadow-2xl border border-slate-800 max-h-[80vh] flex flex-col animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h4 className="text-sm font-extrabold text-white">Select Taluk / City</h4>
+              <button
+                type="button"
+                onClick={() => setIsTalukPickerOpen(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto divide-y divide-slate-800/80 flex-1 pt-1">
+              {allTalukList.map((taluk) => {
+                const isSelected = talukCity === taluk;
+                return (
+                  <button
+                    key={taluk}
+                    type="button"
+                    onClick={() => {
+                      setTalukCity(taluk);
+                      setIsTalukPickerOpen(false);
+                    }}
+                    className={cn(
+                      'w-full py-3 px-3 text-left flex items-center justify-between text-xs font-semibold transition',
+                      isSelected ? 'text-sky-400 font-bold bg-slate-800/50' : 'text-slate-300 hover:text-white hover:bg-slate-800/30'
+                    )}
+                  >
+                    <span>{taluk}</span>
+                    <div
+                      className={cn(
+                        'w-4 h-4 rounded-full border flex items-center justify-center transition-colors',
+                        isSelected ? 'border-sky-400 bg-sky-400' : 'border-slate-500'
+                      )}
+                    >
+                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hobli / Ward Picker Dialog */}
+      {isHobliPickerOpen && (
+        <div
+          className="fixed inset-0 z-popover flex items-center justify-center p-4 bg-slate-950/70 animate-fadeIn"
+          onClick={() => setIsHobliPickerOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-slate-900 text-white rounded-3xl p-4 shadow-2xl border border-slate-800 max-h-[80vh] flex flex-col animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h4 className="text-sm font-extrabold text-white">Select Hobli / Ward ({talukCity})</h4>
+              <button
+                type="button"
+                onClick={() => setIsHobliPickerOpen(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto divide-y divide-slate-800/80 flex-1 pt-1">
+              {(availableHoblis.length > 0 ? availableHoblis : ['Kasaba', 'Central Ward', 'Rural Circle']).map(
+                (hobli) => {
+                  const isSelected = hobliWard === hobli;
+                  return (
+                    <button
+                      key={hobli}
+                      type="button"
+                      onClick={() => {
+                        setHobliWard(hobli);
+                        setIsHobliPickerOpen(false);
+                      }}
+                      className={cn(
+                        'w-full py-3 px-3 text-left flex items-center justify-between text-xs font-semibold transition',
+                        isSelected ? 'text-sky-400 font-bold bg-slate-800/50' : 'text-slate-300 hover:text-white hover:bg-slate-800/30'
+                      )}
+                    >
+                      <span>{hobli}</span>
+                      <div
+                        className={cn(
+                          'w-4 h-4 rounded-full border flex items-center justify-center transition-colors',
+                          isSelected ? 'border-sky-400 bg-sky-400' : 'border-slate-500'
+                        )}
+                      >
+                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />}
+                      </div>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

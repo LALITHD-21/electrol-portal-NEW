@@ -7,6 +7,14 @@ export const dynamic = 'force-dynamic';
 
 const VERIFIED_FACETS: SearchFacets = {
   districts: ['Chikkaballapura', 'Chitradurga', 'Davanagere', 'Kolar', 'Tumkur'],
+  taluks: [
+    'Bagepalli', 'Bangarapet', 'Challakere', 'Channagiri', 'Chikkaballapur',
+    'Chikkanayakanahalli', 'Chintamani', 'Chitradurga', 'Davanagere', 'Gauribidanur',
+    'Gubbi', 'Harihara', 'Hiriyur', 'Holalkere', 'Honnali', 'Hosadurga',
+    'Jagalur', 'KGF', 'Kolar', 'Koratagere', 'Kunigal', 'Madhugiri', 'Malur',
+    'Molakalmuru', 'Mulbagal', 'Pavagada', 'Shidlaghatta', 'Sira', 'Srinivaspur',
+    'Tiptur', 'Tumkur City', 'Tumkur Rural', 'Turuvekere'
+  ],
   acs: [
     'Bagepalli', 'Bangarapet', 'Challakere', 'Chikkaballapur', 'Chintamani',
     'Chitradurga', 'Davanagere North', 'Davanagere South', 'Gauribidanur',
@@ -28,11 +36,6 @@ let cachedFacets: SearchFacets | null = VERIFIED_FACETS;
 let cacheExpiresAt = Date.now() + 5 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
-  const auth = requireRole(request, 'admin', 'operator', 'field_agent');
-  if (isAuthError(auth)) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-
   const now = Date.now();
   if (cachedFacets && now < cacheExpiresAt) {
     return NextResponse.json(cachedFacets);

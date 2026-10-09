@@ -248,8 +248,8 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
         <div className="space-y-3.5">
           {/* Ordinary Residence Address Block */}
           <div className="flex items-start gap-3.5 bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/70 shadow-2xs">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5 text-brand-600 shadow-2xs">
-              <MapPin className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-red-50/80 border border-red-100 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-2xs">
+              <img src="/location-pin.png" alt="Location" className="w-5 h-5 object-contain" />
             </div>
             <div className="space-y-1 min-w-0">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
@@ -369,7 +369,7 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
 
                 {elector.area_ward && (
                   <div className="sm:col-span-2 flex items-start gap-2.5 pt-2 border-t border-sky-100/70 mt-1">
-                    <MapPin className="w-4 h-4 text-sky-600 flex-shrink-0 mt-0.5" />
+                    <img src="/location-pin.png" alt="Location" className="w-4 h-4 object-contain flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Area / Ward</span>
                       <span className="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed">{elector.area_ward}</span>
