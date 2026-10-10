@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "npm run dev --prefix web",
     "build": "cd web && npm install && npm run build",
-    "start": "npm run start --prefix web"
+    "start": "npm run start --prefix web",
+    "ingest": "node scripts/ingest-new-excel.js"
   }
 }
