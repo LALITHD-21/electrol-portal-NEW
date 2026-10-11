@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
       return count ?? 223789;
     };
 
-    // Fast 600ms timeout: never hang the Node server thread
+    // 3500ms timeout: allows exact count over 243k rows without hanging
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Stats count timeout')), 600)
+      setTimeout(() => reject(new Error('Stats count timeout')), 3500)
     );
 
     let count = cachedCount;

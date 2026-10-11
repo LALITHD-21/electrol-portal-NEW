@@ -14,6 +14,7 @@ import { SpecularButton } from '@/components/ui/SpecularButton';
 import { ArrowLeft, Copy, Check, Loader2, Sparkles, Printer, Edit3 } from 'lucide-react';
 import { getElectorByEpic, primeElectorCache } from '@/lib/electorService';
 import { formatEpicForDisplay } from '@/lib/utils';
+import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { saveSearchHistoryItem } from '@/lib/searchHistory';
 
 interface ProfileDisplayProps {
@@ -74,12 +75,14 @@ export default function ProfileDisplay({
       ? `${phoneDigits.slice(0, 5)} ${phoneDigits.slice(5)}`
       : phoneDigits;
 
+    const pollingInfo = resolvePollingStationDetails(currentElector);
+
     const summary = [
       `--- ELECTOR DETAILS SLIP ---`,
       `EPIC Number: ${formatEpicForDisplay(currentElector.epic_number)}`,
       `Name: ${currentElector.name}`,
       currentElector.relative_name ? `Father / Husband: ${currentElector.relative_name}` : null,
-      currentElector.age ? `Age: ${currentElector.age}` : null,
+      currentElector.age ? `Age: ${currentElector.age} yrs` : null,
       currentElector.sex ? `Sex: ${currentElector.sex === 'M' ? 'Male' : currentElector.sex === 'F' ? 'Female' : currentElector.sex}` : null,
       phoneDisplay ? `WhatsApp / Mobile: ${phoneDisplay}` : null,
       currentElector.caste ? `Caste: ${currentElector.caste}` : null,
@@ -93,10 +96,13 @@ export default function ProfileDisplay({
       currentElector.grama_panchayath ? `Gram Panchayat: ${currentElector.grama_panchayath}` : null,
       currentElector.village ? `Village: ${currentElector.village}` : null,
       currentElector.area_ward ? `Area / Ward: ${currentElector.area_ward}` : null,
-      currentElector.serial_number ? `Serial No: ${currentElector.serial_number}` : null,
-      currentElector.part_number ? `Part Number: ${currentElector.part_number}` : null,
-      currentElector.polling_station_name ? `Polling Station: ${currentElector.polling_station_name}` : null,
-      currentElector.polling_address ? `Polling Address: ${currentElector.polling_address}` : null,
+      currentElector.serial_number ? `Serial No: #${currentElector.serial_number}` : null,
+      `Part Number: Part ${pollingInfo.basePartNumber}`,
+      `Polling Booth: ${pollingInfo.boothLabel} (${pollingInfo.boothType})`,
+      `Building Name & Room: ${pollingInfo.buildingName}`,
+      `Location: ${pollingInfo.location}`,
+      `Polling Area: ${pollingInfo.pollingArea}`,
+      pollingInfo.serialRangeText ? `Roll Coverage: ${pollingInfo.serialRangeText}` : null,
     ]
       .filter(Boolean)
       .join('\n');

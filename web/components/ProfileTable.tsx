@@ -3,6 +3,7 @@
 import React from 'react';
 import { Elector } from '@/lib/types';
 import { formatEpicForDisplay } from '@/lib/utils';
+import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { Printer, FileText, Edit3 } from 'lucide-react';
 
 interface ProfileTableProps {
@@ -23,6 +24,8 @@ function formatPhoneDisplay(phone: string | null): string {
 }
 
 export default function ProfileTable({ elector, onEditRequest }: ProfileTableProps) {
+  const pollingInfo = resolvePollingStationDetails(elector);
+
   const mainRows = [
     { label: 'EPIC Number', value: elector.epic_number, formatted: formatEpicForDisplay(elector.epic_number), isMono: true, nowrap: true },
     { label: 'Serial Number', value: elector.serial_number?.toString() || '—', isMono: true, nowrap: true },
@@ -48,9 +51,12 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
   ];
 
   const pollingRows = [
-    { label: 'Part Number', value: elector.part_number ? `Part ${elector.part_number}` : '—', isMono: true, nowrap: true },
-    { label: 'Polling Station', value: elector.polling_station_name || '—' },
-    { label: 'Polling Address', value: elector.polling_address || '—' },
+    { label: 'Part Number', value: `Part ${pollingInfo.basePartNumber}`, isMono: true, nowrap: true },
+    { label: 'Booth Designation', value: `${pollingInfo.boothLabel} (${pollingInfo.boothType})`, isMono: false },
+    { label: 'Building Name & Room', value: pollingInfo.buildingName },
+    { label: 'Location / Hobli', value: pollingInfo.location },
+    { label: 'Polling Area / Coverage', value: pollingInfo.pollingArea },
+    ...(pollingInfo.serialRangeText ? [{ label: 'Voter Roll Range', value: `${pollingInfo.serialRangeText}${pollingInfo.thresholdNotice ? ` — ${pollingInfo.thresholdNotice}` : ''}` }] : []),
   ];
 
   const handlePrint = () => {

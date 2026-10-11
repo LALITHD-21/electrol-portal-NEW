@@ -20,6 +20,7 @@ import {
 import { SearchResultRow } from '@/features/search/types';
 import { formatEpicForDisplay, getInitials } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
+import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export interface ElectorDetailModalProps {
@@ -43,18 +44,14 @@ export function ElectorDetailModal({
   if (!isOpen || !elector) return null;
 
   const loc = resolveElectorLocation(elector);
-  const partNo = elector.part_number || '1';
+  const pollingInfo = resolvePollingStationDetails(elector);
+  const partNo = pollingInfo.basePartNumber;
   const serialNo = resolveElectorSerialNumber(elector);
   const electorName = elector.name || '—';
   const relativeName = elector.relative_name || '—';
   const epic = formatEpicForDisplay(elector.epic_number || '');
   const talukCity = elector.taluk || loc.taluk || loc.district || 'Tumkur';
-  const hobliWard = elector.polling_station_name || loc.ac_name || '—';
   const area = elector.village || elector.address || `${loc.taluk}, ${loc.district}`;
-  const pollingAddress =
-    elector.polling_address ||
-    elector.village ||
-    `Entire Ward / Station Area, ${talukCity}, ${loc.district}, Karnataka`;
 
   const initials = getInitials(electorName);
 
@@ -64,12 +61,16 @@ export function ElectorDetailModal({
       `EPIC Number: ${epic}`,
       `Name: ${electorName}`,
       `Father / Husband: ${relativeName}`,
-      `Part Number: ${partNo}`,
-      `Part Serial No: ${serialNo}`,
+      `Part Number: Part ${pollingInfo.basePartNumber}`,
+      `Polling Booth: ${pollingInfo.boothLabel} (${pollingInfo.boothType})`,
+      `Part Serial No: #${serialNo}`,
       elector.age ? `Age: ${elector.age} yrs` : null,
       elector.sex ? `Gender: ${elector.sex === 'M' ? 'Male' : elector.sex === 'F' ? 'Female' : elector.sex}` : null,
       `Address: ${area}`,
-      elector.polling_station_name ? `Polling Station: ${elector.polling_station_name}` : null,
+      `Building Name & Room: ${pollingInfo.buildingName}`,
+      `Location: ${pollingInfo.location}`,
+      `Polling Area: ${pollingInfo.pollingArea}`,
+      pollingInfo.serialRangeText ? `Roll Coverage: ${pollingInfo.serialRangeText}` : null,
       `District: ${loc.district}`,
       `Taluk: ${talukCity}`,
     ]
@@ -86,10 +87,11 @@ export function ElectorDetailModal({
 👤 ಹೆಸರು / Name: ${electorName}
 👨‍👩‍👧 ತಂದೆ/ತಾಯಿ/ಪತಿ: ${relativeName}
 🆔 EPIC: ${epic}
-🏛️ Part No: ${partNo}
-🔢 Serial No: ${serialNo}
-📍 Taluk / City: ${talukCity} (${loc.district})
-🏢 Area / Station: ${area}
+🏛️ Part No: Part ${pollingInfo.basePartNumber} (${pollingInfo.boothLabel})
+🔢 Serial No: #${serialNo}
+🏢 Polling Station: ${pollingInfo.buildingName}
+📍 Location: ${pollingInfo.location}
+🗺️ Area: ${pollingInfo.pollingArea}
 Vote on polling day!`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
@@ -270,45 +272,88 @@ Vote on polling day!`;
 
           {/* SECTION 4: Polling Station Operational Block */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 px-1">
-              <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-2xs">
-                <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-2xs">
+                  <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                </div>
+                <span className="text-[11px] font-black tracking-wider uppercase text-slate-700">
+                  Polling Station &amp; Booth Allocation
+                </span>
               </div>
-              <span className="text-[11px] font-black tracking-wider uppercase text-slate-700">
-                Polling Station Info
-              </span>
+              {pollingInfo.isAuxiliary ? (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                  Auxiliary Booth ({pollingInfo.boothCode})
+                </span>
+              ) : (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+                  Primary Booth ({pollingInfo.boothCode})
+                </span>
+              )}
             </div>
 
-            <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-3 shadow-2xs text-xs">
-              {/* Part Number */}
+            <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 space-y-2.5 shadow-2xs text-xs">
+              {/* Part & Booth Designation */}
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[11px] font-bold uppercase text-slate-400 w-28 shrink-0">
-                  Part Number
+                  Part &amp; Booth
                 </span>
-                <span className="px-2.5 py-0.5 rounded-md bg-white border border-blue-200 text-blue-700 font-mono font-black text-xs shadow-2xs">
-                  {partNo}
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-800 font-mono font-bold text-xs shadow-2xs">
+                    Part {pollingInfo.basePartNumber}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-md font-mono font-black text-xs shadow-2xs ${pollingInfo.isAuxiliary ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-blue-100 text-blue-900 border border-blue-200'}`}>
+                    Booth {pollingInfo.boothCode}
+                  </span>
+                  {pollingInfo.roomNumber && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold text-[10px]">
+                      {pollingInfo.roomNumber}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Building Name */}
+              <div className="flex items-start justify-between gap-3 pt-1 border-t border-slate-200/60">
+                <span className="text-[11px] font-bold uppercase text-slate-400 w-28 shrink-0">
+                  Building Name
+                </span>
+                <span className="font-extrabold text-slate-900 text-right leading-snug">
+                  {pollingInfo.buildingName}
                 </span>
               </div>
 
-              {/* Station Name */}
+              {/* Location */}
               <div className="flex items-start justify-between gap-3 pt-1 border-t border-slate-200/60">
                 <span className="text-[11px] font-bold uppercase text-slate-400 w-28 shrink-0">
-                  Station Name
+                  Location
                 </span>
-                <span className="font-bold text-slate-900 text-right leading-snug">
-                  {hobliWard}
+                <span className="font-bold text-slate-800 text-right leading-snug">
+                  {pollingInfo.location}
                 </span>
               </div>
 
-              {/* Coverage Area */}
+              {/* Polling Area */}
               <div className="flex items-start justify-between gap-3 pt-1 border-t border-slate-200/60">
                 <span className="text-[11px] font-bold uppercase text-slate-400 w-28 shrink-0">
-                  Coverage Area
+                  Polling Area
                 </span>
                 <span className="font-medium text-slate-700 text-right leading-snug">
-                  {pollingAddress}
+                  {pollingInfo.pollingArea}
                 </span>
               </div>
+
+              {/* Voter Roll Range */}
+              {pollingInfo.serialRangeText && (
+                <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-200/60">
+                  <span className="text-[11px] font-bold uppercase text-slate-400 w-28 shrink-0">
+                    Roll Range
+                  </span>
+                  <span className="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-right">
+                    {pollingInfo.serialRangeText}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

@@ -32,7 +32,7 @@ export function normalizeEpic(input: string): string {
  *   ''            -> false
  */
 export function isValidEpic(epic: string): boolean {
-    return /^[A-Z]{3}\d{7}$/.test(epic);
+    return /^[A-Z0-9]{10}$/.test(epic);
 }
 
 /**

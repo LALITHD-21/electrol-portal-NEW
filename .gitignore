@@ -53,3 +53,14 @@ etl/page81_*
 public only view refernce photo/
 web/test_pin.png
 web/data/backups/
+etl/reports/
+
+# --- Newly Received Heavy Data & Large Scanned PDFs (>100MB) ---
+updates voter list pdf/
+uptaed voter list/
+new poling addres/
+new updated voter list.pdf
+new_members_*.xlsx
+new_members_*.csv
+etl/stations_dump.json
+
