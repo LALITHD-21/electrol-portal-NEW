@@ -99,12 +99,15 @@ export async function GET(request: NextRequest) {
       occupation
     `;
 
-    let query = supabase.from('electors').select(selectColumns, { count: 'exact' });
+    const isEpicQuery = isValidEpic(normalizedQEpic);
+    let query = isEpicQuery
+      ? supabase.from('electors').select(selectColumns)
+      : supabase.from('electors').select(selectColumns, { count: 'exact' });
 
-    // Mode A: Exact EPIC card number format
-    if (isValidEpic(normalizedQEpic)) {
+    // Mode A: Exact EPIC card number format (indexed 15ms lookup)
+    if (isEpicQuery) {
       queryType = 'epic';
-      query = query.eq('epic_number', normalizedQEpic);
+      query = query.eq('epic_number', normalizedQEpic).limit(1);
     }
     // Mode B: 10-digit Mobile number
     else if (
@@ -120,6 +123,20 @@ export async function GET(request: NextRequest) {
     }
     // Mode C: Name or Location text search (with optional fuzzy transliteration expansion)
     else if (trimmedQ.length > 0) {
+      // Guard against slow 1-character full-table scans across 192k records unless filtered
+      const hasAnyFilter = Boolean(part || ac || district || taluk || village);
+      if (trimmedQ.length < 2 && !hasAnyFilter) {
+        return NextResponse.json({
+          rows: [],
+          total: 0,
+          page,
+          pageSize,
+          queryType: 'name',
+          durationMs: Math.round(performance.now() - startTime),
+          boothInfo: null,
+        });
+      }
+
       queryType = fuzzy ? 'fuzzy' : 'name';
 
       // Check transliteration variants table
@@ -301,7 +318,7 @@ export async function GET(request: NextRequest) {
 
     const responsePayload: SearchApiResponse = {
       rows: sanitizedRows,
-      total: count ?? 0,
+      total: isEpicQuery ? sanitizedRows.length : (count ?? 0),
       page,
       pageSize,
       queryType,

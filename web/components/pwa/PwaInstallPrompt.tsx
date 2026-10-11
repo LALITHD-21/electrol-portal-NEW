@@ -102,17 +102,9 @@ export function PwaInstallPrompt() {
       }, 2500);
     }
 
-    // 6. If navigated with ?install=1 from an intent, auto-prompt immediately
+    // 6. If navigated with ?install=1 from an intent, open install modal cleanly
     if (window.location.search && window.location.search.indexOf('install=') !== -1) {
-      const promptObj = (window as any).__pwaInstallPrompt;
-      if (promptObj) {
-        try {
-          promptObj.prompt();
-          promptObj.userChoice.then((choice: any) => {
-            if (choice?.outcome === 'accepted') setIsInstalled(true);
-          });
-        } catch {}
-      }
+      setShowModal(true);
     }
 
     return () => {

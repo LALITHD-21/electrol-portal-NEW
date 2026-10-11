@@ -189,7 +189,7 @@ export function useSearch() {
     [pageSize]
   );
 
-  // Trigger search with 300 ms debounce when query or filters change
+  // Trigger search with 200 ms debounce when query or filters change
   const triggerDebouncedSearch = useCallback(
     (newQ: string, newFilters: SearchFiltersState, newPage: number) => {
       if (debounceTimerRef.current) {
@@ -199,7 +199,7 @@ export function useSearch() {
       debounceTimerRef.current = setTimeout(() => {
         updateUrl(newQ, newFilters, newPage);
         executeSearch(newQ, newFilters, newPage);
-      }, 300);
+      }, 200);
     },
     [executeSearch, updateUrl]
   );
@@ -207,6 +207,13 @@ export function useSearch() {
   const handleQueryChange = (val: string) => {
     setQuery(val);
     setPage(1);
+    const normalized = normalizeEpic(val.trim());
+    if (isValidEpic(normalized)) {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      updateUrl(val, filters, 1);
+      executeSearch(val, filters, 1);
+      return;
+    }
     triggerDebouncedSearch(val, filters, 1);
   };
 
