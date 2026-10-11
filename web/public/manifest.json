@@ -2,7 +2,7 @@
   "name": "Electoral Lookup · South-East Graduates",
   "short_name": "Voter Search",
   "description": "Electoral voter profile lookup and voter slip download for Karnataka South-East Graduates Constituency",
-  "id": "/",
+  "id": "/search",
   "start_url": "/search",
   "scope": "/",
   "display": "standalone",
@@ -38,6 +38,14 @@
       "src": "/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/splash-mobile.jpg",
+      "sizes": "576x1024",
+      "type": "image/jpeg",
+      "form_factor": "narrow"
     }
   ]
 }

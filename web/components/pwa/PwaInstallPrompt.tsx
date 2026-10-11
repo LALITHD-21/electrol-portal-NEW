@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import {
-  Smartphone,
   Download,
   Share,
   PlusSquare,
   X,
-  Check,
   Compass,
   ChevronDown,
   Sparkles,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
@@ -23,13 +23,13 @@ export function PwaInstallPrompt() {
   const [isIos, setIsIos] = useState(false);
   const [isIpad, setIsIpad] = useState(false);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
-  const [isChromeIos, setIsChromeIos] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isWaitingPrompt, setIsWaitingPrompt] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // 1. Detect if already standalone / installed
+    // 1. Detect if already running in standalone / installed PWA mode
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true ||
@@ -37,13 +37,13 @@ export function PwaInstallPrompt() {
 
     setIsInstalled(isStandalone);
 
-    // 2. Keep prompt accessible across visits
+    // Keep prompt accessible across visits
     try {
       sessionStorage.removeItem('pwa_prompt_dismissed');
     } catch {}
     setIsDismissed(false);
 
-    // 3. Reliable iOS & iPadOS Detection (including iPadOS 13+ desktop userAgent)
+    // 2. Reliable iOS & iPadOS Detection
     const ua = window.navigator.userAgent.toLowerCase();
     const isIosDevice =
       /iphone|ipad|ipod/.test(ua) ||
@@ -55,86 +55,127 @@ export function PwaInstallPrompt() {
     setIsIos(isIosDevice);
     setIsIpad(isIpadDevice);
 
-    if (isIosDevice) {
-      // Check if In-App browser (WhatsApp, Instagram, Facebook, Line, Telegram, WeChat)
-      const inApp =
-        /instagram|fbav|fban|whatsapp|line|micromessenger|snapchat|twitter/i.test(
-          ua
-        ) || (!(window as any).safari && !/crios|fxios|edgios/i.test(ua));
-      setIsInAppBrowser(inApp);
+    // Check if in-app browser (e.g. WhatsApp, Instagram, Facebook, Line, Telegram, Twitter)
+    const inApp =
+      /instagram|fbav|fban|whatsapp|line|micromessenger|snapchat|twitter/i.test(ua) ||
+      (!isIosDevice && /wv/i.test(ua));
+    setIsInAppBrowser(inApp);
 
-      // Check if Chrome on iOS
-      const chromeIos = /crios/i.test(ua);
-      setIsChromeIos(chromeIos);
+    // 3. Immediately pick up any early prompt captured before React mounted
+    if ((window as any).__pwaInstallPrompt) {
+      setDeferredPrompt((window as any).__pwaInstallPrompt);
     }
 
     // 4. Capture native Chromium install prompt
-    const handleBeforeInstallPrompt = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      (window as any).__pwaInstallPrompt = e;
     };
 
-    // 5. Global listener for manual install button clicks
-    const handleOpenCustom = () => {
-      setIsDismissed(false);
-      setShowModal(true);
-      if (deferredPrompt) {
-        try {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then((choice: any) => {
-            if (choice.outcome === 'accepted') {
-              setIsInstalled(true);
-            }
-            setDeferredPrompt(null);
-          }).catch(() => {
-            setShowModal(true);
-          });
-        } catch {
-          setShowModal(true);
-        }
+    const handlePromptAvailable = (e: any) => {
+      const promptObj = e?.detail || (window as any).__pwaInstallPrompt;
+      if (promptObj) {
+        setDeferredPrompt(promptObj);
       }
     };
-    window.addEventListener('open-pwa-install', handleOpenCustom);
 
-    // 6. Automatic gentle prompt on iOS if not standalone
-    if (isIosDevice && !isStandalone) {
-      const autoTimer = setTimeout(() => {
-        setShowModal(true);
-      }, 2500);
-      return () => {
-        clearTimeout(autoTimer);
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.removeEventListener('open-pwa-install', handleOpenCustom);
-      };
-    }
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setShowModal(false);
+      setDeferredPrompt(null);
+      (window as any).__pwaInstallPrompt = null;
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-prompt-available', handlePromptAvailable);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-prompt-available', handlePromptAvailable);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  // Main automatic install trigger
+  const triggerInstallFlow = useCallback(async () => {
+    setIsDismissed(false);
+
+    // Case 1: iOS Devices (iPhone / iPad)
+    if (isIos) {
+      // 1-Tap direct trigger: initiate Apple MobileConfig WebClip download
+      try {
+        window.location.href = '/api/pwa/ios-profile';
+      } catch (err) {
+        console.error('iOS profile trigger error:', err);
+      }
+      // Open clean iOS guide modal to walk user through system prompt / Settings
+      setShowModal(true);
+      return;
+    }
+
+    // Case 2: Android / Chromium Desktop
+    let prompt =
+      deferredPrompt ||
+      (typeof window !== 'undefined' ? (window as any).__pwaInstallPrompt : null);
+
+    // If prompt is not ready yet, wait briefly (up to 1.2s) in case service worker or manifest check is finishing
+    if (!prompt) {
+      setIsWaitingPrompt(true);
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(() => resolve(), 1200);
+        const onReady = (e: any) => {
+          clearTimeout(timer);
+          prompt = e?.detail || (window as any).__pwaInstallPrompt;
+          window.removeEventListener('pwa-prompt-available', onReady);
+          resolve();
+        };
+        window.addEventListener('pwa-prompt-available', onReady, { once: true });
+      });
+      setIsWaitingPrompt(false);
+      prompt =
+        prompt ||
+        (typeof window !== 'undefined' ? (window as any).__pwaInstallPrompt : null);
+    }
+
+    if (prompt) {
+      try {
+        setShowModal(false); // DO NOT SHOW FALLBACK MODAL ON ANDROID
+        await prompt.prompt();
+        const choice = await prompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          setIsInstalled(true);
+          setShowModal(false);
+        }
+        setDeferredPrompt(null);
+        if (typeof window !== 'undefined') {
+          (window as any).__pwaInstallPrompt = null;
+        }
+        return;
+      } catch (err) {
+        console.error('PWA install prompt error:', err);
+      }
+    }
+
+    // Case 3: In-app browser or browser without beforeinstallprompt support
+    setShowModal(true);
+  }, [deferredPrompt, isIos]);
+
+  // Global listener for header install button
+  useEffect(() => {
+    const handleOpenCustom = () => {
+      triggerInstallFlow();
+    };
+    window.addEventListener('open-pwa-install', handleOpenCustom);
+    return () => {
       window.removeEventListener('open-pwa-install', handleOpenCustom);
     };
-  }, [deferredPrompt]);
+  }, [triggerInstallFlow]);
 
   if (isInstalled && !showModal) {
     return null;
   }
-
-  const handleInstallClick = async () => {
-    setIsDismissed(false);
-    if (deferredPrompt) {
-      try {
-        deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        if (choice.outcome === 'accepted') {
-          setIsInstalled(true);
-        }
-        setDeferredPrompt(null);
-      } catch {
-        setShowModal(true);
-      }
-    } else {
-      setShowModal(true);
-    }
-  };
 
   const handleDismiss = () => {
     setIsDismissed(true);
@@ -148,56 +189,61 @@ export function PwaInstallPrompt() {
       {/* Sleek Floating Install Pill / Banner */}
       {!isDismissed && !isInstalled && (
         <div className="w-full max-w-2xl mx-auto px-2 animate-fadeIn">
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 rounded-2xl p-2.5 sm:p-3 text-white shadow-md shadow-blue-900/10 border border-blue-400/40 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-white p-1 flex-shrink-0 flex items-center justify-center shadow-xs border border-blue-200/50">
-              <Image
-                src="/app-logo.png"
-                alt="App Logo"
-                width={32}
-                height={32}
-                className="rounded-lg object-contain"
-                unoptimized
-              />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-black text-white truncate leading-tight">
-                  {t.pwaInstallTitle}
-                </p>
-                <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-white/20 text-white">
-                  iOS &amp; Android
-                </span>
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 rounded-2xl p-2.5 sm:p-3 text-white shadow-md shadow-blue-900/10 border border-blue-400/40 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-white p-1 flex-shrink-0 flex items-center justify-center shadow-xs border border-blue-200/50">
+                <Image
+                  src="/app-logo.png"
+                  alt="App Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-lg object-contain"
+                  unoptimized
+                />
               </div>
-              <p className="text-[11px] text-blue-100 font-medium truncate mt-0.5">
-                {t.pwaInstallSubtitle}
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-black text-white truncate leading-tight">
+                    {t.pwaInstallTitle}
+                  </p>
+                  <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-white/20 text-white">
+                    iOS &amp; Android
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-100 font-medium truncate mt-0.5">
+                  {t.pwaInstallSubtitle}
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              type="button"
-              onClick={handleInstallClick}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 rounded-xl text-xs font-black shadow-xs transition"
-            >
-              <Download className="w-3.5 h-3.5 text-blue-600" />
-              <span>{t.pwaInstallBtn}</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="p-1.5 text-white/80 hover:text-white hover:bg-black/10 rounded-lg transition"
-              aria-label="Dismiss install banner"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={triggerInstallFlow}
+                disabled={isWaitingPrompt}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 rounded-xl text-xs font-black shadow-xs transition disabled:opacity-75"
+              >
+                {isWaitingPrompt ? (
+                  <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 text-blue-600" />
+                )}
+                <span>{t.pwaInstallBtn}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="p-1.5 text-white/80 hover:text-white hover:bg-black/10 rounded-lg transition"
+                aria-label="Dismiss install banner"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
-      {/* iOS / Fallback Installation Guide Modal */}
+      {/* iOS or In-App Browser Guidance Modal */}
       {showModal && (
         <div
           className="fixed inset-0 z-modal flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn"
@@ -246,114 +292,90 @@ export function PwaInstallPrompt() {
               </button>
             </div>
 
-            {/* In-App Browser Warning (e.g. opened inside WhatsApp, Instagram, Telegram) */}
-            {isIos && isInAppBrowser && (
+            {/* In-App Browser Warning (WhatsApp, Instagram, Telegram) */}
+            {isInAppBrowser && (
               <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-800 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-amber-900">
                   <Compass className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>Open in Safari first</span>
+                  <span>{isIos ? 'Open in Safari first' : 'Open in Chrome first'}</span>
                 </div>
                 <p className="text-[11px] leading-snug">
-                  You are viewing this inside an in-app browser. Tap the menu (•••)
-                  or Share icon and select <strong>&quot;Open in Safari&quot;</strong> to
-                  install onto your iPhone.
+                  You are viewing this inside an in-app browser (e.g. WhatsApp). Tap the menu (<strong>•••</strong> or <strong>⋮</strong>)
+                  and select <strong>&quot;{isIos ? 'Open in Safari' : 'Open in Chrome'}&quot;</strong> to enable automatic installation.
                 </p>
               </div>
             )}
 
-            {/* iOS Safari Guided Steps */}
+            {/* iOS Guided Steps */}
             {isIos ? (
-              <div className="space-y-2.5">
-                <p className="text-xs font-bold text-slate-800">
-                  Follow these 3 quick steps in Safari:
-                </p>
+              <div className="space-y-3">
+                {/* 1-Tap Apple WebClip Profile Status */}
+                <div className="p-3 bg-blue-50/90 rounded-2xl border border-blue-200/80 text-xs text-blue-900 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-900">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span>Automatic Profile Download Triggered</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-blue-800 font-medium">
+                    <li>Tap <strong>&quot;Allow&quot;</strong> on Apple&apos;s system prompt</li>
+                    <li>Open iPhone <strong>Settings</strong> app</li>
+                    <li>Tap <strong>&quot;Profile Downloaded&quot;</strong> at top &amp; tap <strong>Install</strong></li>
+                  </ol>
+                </div>
+
+                <div className="relative flex py-1 items-center">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink mx-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Or Safari 2-Tap Install
+                  </span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
 
                 <div className="space-y-2 text-xs text-slate-700">
                   {/* Step 1 */}
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-[11px] flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center flex-shrink-0">
                       1
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900">
-                        Tap the <span className="text-blue-600 font-bold">Share</span> button
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        {isIpad
-                          ? 'Located at the top toolbar in Safari'
-                          : 'Located at the bottom bar of Safari'}
+                      <p className="font-semibold text-slate-900 text-[11px]">
+                        Tap Safari <span className="text-blue-600 font-bold">Share</span> button
                       </p>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-2xs flex-shrink-0">
-                      <Share className="w-4 h-4" />
+                    <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-2xs flex-shrink-0">
+                      <Share className="w-3.5 h-3.5" />
                     </div>
                   </div>
 
                   {/* Step 2 */}
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-[11px] flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center flex-shrink-0">
                       2
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900">
-                        Scroll down and tap
-                      </p>
-                      <p className="text-[11px] font-bold text-slate-800">
-                        &quot;Add to Home Screen&quot;
+                      <p className="font-semibold text-slate-900 text-[11px]">
+                        Scroll &amp; tap <span className="font-bold text-slate-800">&quot;Add to Home Screen&quot;</span>
                       </p>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 shadow-2xs flex-shrink-0">
-                      <PlusSquare className="w-4 h-4" />
-                    </div>
-                  </div>
-
-                  {/* Step 3 */}
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-[11px] flex items-center justify-center flex-shrink-0 shadow-xs">
-                      3
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900">
-                        Tap <span className="text-blue-600 font-bold">&quot;Add&quot;</span> in top right
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        App will instantly appear on your home screen
-                      </p>
-                    </div>
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 shadow-2xs flex-shrink-0 font-bold text-[11px]">
-                      Add
+                    <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 shadow-2xs flex-shrink-0">
+                      <PlusSquare className="w-3.5 h-3.5" />
                     </div>
                   </div>
                 </div>
 
                 {/* iPhone Bottom Bar Indicator Cue */}
                 {!isIpad && (
-                  <div className="pt-1 flex items-center justify-center gap-1.5 text-[11px] text-blue-600 font-bold animate-bounce">
+                  <div className="pt-0.5 flex items-center justify-center gap-1 text-[11px] text-blue-600 font-bold">
                     <ChevronDown className="w-3.5 h-3.5" />
-                    <span>Look for the Share icon at the bottom of your screen</span>
+                    <span>Share icon is located at the bottom of Safari</span>
                     <ChevronDown className="w-3.5 h-3.5" />
                   </div>
                 )}
-
-                {/* Direct 1-Tap iOS WebClip Profile Option */}
-                <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                  <p className="text-[10px] text-slate-500 font-semibold text-center">
-                    Alternative: Install via Apple Configuration Profile
-                  </p>
-                  <a
-                    href="/api/pwa/ios-profile"
-                    className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 border border-slate-300/80"
-                  >
-                    <Download className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Download iOS Install Profile (.mobileconfig)</span>
-                  </a>
-                </div>
               </div>
             ) : (
-              /* Android / Desktop Fallback */
+              /* Android Fallback (Only shown if in-app browser or non-Chromium) */
               <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 text-xs text-slate-700">
                 <p className="font-semibold text-slate-900">
-                  To install on Android or desktop:
+                  To install on Android:
                 </p>
                 <p className="text-[11px] leading-relaxed text-slate-600">
                   Tap your browser menu (<strong>⋮</strong>) in the top-right corner,
