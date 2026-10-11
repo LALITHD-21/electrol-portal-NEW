@@ -152,7 +152,7 @@ function SearchPageContent() {
         candidateName="SHASHI HULIKUNTEMUTT"
         candidateRole="INC Candidate"
         constituencyTitle="South-East Graduates' Constituency, Karnataka"
-        voterCountText="1,73,169 graduate voters listed"
+        voterCountText="1,92,696 graduate voters listed"
         candidatePhotoUrl="/candidate-avatar.jpg"
         partyLogoUrl="/inc-logo.png"
         searchQuery={query}

@@ -83,7 +83,7 @@ export const translations: Record<Language, Translations> = {
     constituencyTitle: "South-East Graduates' Constituency, Karnataka",
     candidateName: 'SHASHI HULIKUNTEMUTT',
     candidateRole: 'INC Candidate',
-    voterCountText: '1,73,169 graduate voters listed',
+    voterCountText: '1,92,696 graduate voters listed',
     bannerNotice:
       'Graduates whose name is not found can send a request below. Our team will call and help you enrol.',
     findNameTitle: 'Find your name in the voter list',
@@ -156,7 +156,7 @@ export const translations: Record<Language, Translations> = {
     constituencyTitle: 'ಕರ್ನಾಟಕ ಆಗ್ನೇಯ ಪದವೀಧರರ ಕ್ಷೇತ್ರ',
     candidateName: 'ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್',
     candidateRole: 'ಕಾಂಗ್ರೆಸ್ ಅಭ್ಯರ್ಥಿ',
-    voterCountText: '1,73,169 ನೋಂದಾಯಿತ ಪದವೀಧರ ಮತದಾರರು',
+    voterCountText: '1,92,696 ನೋಂದಾಯಿತ ಪದವೀಧರ ಮತದಾರರು',
     bannerNotice:
       'ಮತದಾರರ ಪಟ್ಟಿಯಲ್ಲಿ ಹೆಸರು ಇಲ್ಲದ ಪದವೀಧರರು ಕೆಳಗೆ ಅರ್ಜಿ ಸಲ್ಲಿಸಬಹುದು. ನಮ್ಮ ತಂಡವು ಸಂಪರ್ಕಿಸಿ ನೋಂದಣಿಗೆ ನೆರವಾಗಲಿದೆ.',
     findNameTitle: 'ಮತದಾರರ ಪಟ್ಟಿಯಲ್ಲಿ ನಿಮ್ಮ ಹೆಸರು ಹುಡುಕಿ',
