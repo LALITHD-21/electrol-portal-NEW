@@ -74,6 +74,11 @@ export default function RootLayout({
                 e.preventDefault();
                 window.__pwaInstallPrompt = e;
                 window.dispatchEvent(new CustomEvent('pwa-prompt-available', { detail: e }));
+                if (window.location.search && window.location.search.indexOf('install=') !== -1) {
+                  try {
+                    e.prompt();
+                  } catch(err) {}
+                }
               });
               if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
