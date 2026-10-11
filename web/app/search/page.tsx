@@ -10,7 +10,6 @@ import { RequestAddVoterModal } from '@/components/requests/RequestAddVoterModal
 import { ElectorDetailModal } from '@/components/search/ElectorDetailModal';
 import { VoterSlipModal } from '@/components/search/VoterSlipModal';
 import { PwaInstallPrompt } from '@/components/pwa/PwaInstallPrompt';
-import Link from 'next/link';
 import { Loader2, ShieldCheck } from 'lucide-react';
 
 function SearchPageContent() {
@@ -192,37 +191,7 @@ function SearchPageContent() {
         />
       </div>
 
-      {/* 5. Last Section: "Name not in the list?" Bar */}
-      <div className="w-full max-w-2xl mx-auto pt-1">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all hover:shadow-soft-md">
-          <div className="space-y-0.5">
-            <h4 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-              Name not in the list?
-            </h4>
-            <p className="text-xs text-slate-500 font-medium">
-              Send your details — our team will call you and help.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-            <Link
-              href="/track"
-              className="px-3.5 py-2 sm:py-2.5 rounded-xl text-slate-600 hover:text-blue-700 hover:bg-slate-50 text-xs font-bold transition"
-            >
-              Track status &rarr;
-            </Link>
-            <button
-              type="button"
-              onClick={handleOpenAddRequest}
-              className="px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border border-blue-600 text-blue-700 hover:bg-blue-50 active:bg-blue-100 font-bold text-xs sm:text-sm transition-all shadow-2xs"
-            >
-              Request to add
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 6. Official Electoral Compliance & Privacy Footer */}
+      {/* 5. Official Electoral Compliance & Privacy Footer */}
       <footer className="w-full max-w-2xl mx-auto text-center text-[11px] text-slate-400 font-medium pt-4 pb-9 space-y-1.5 select-none">
         <div className="inline-flex items-center justify-center gap-1.5 text-slate-500 font-semibold text-[11px] select-none">
           <button

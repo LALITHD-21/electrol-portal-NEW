@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import {
-  AlertCircle,
   Search,
   ChevronDown,
   Check,
@@ -156,17 +155,7 @@ export function CandidateHeroBanner({
         </div>
       </div>
 
-      {/* 3. Alert / Notice Box Below Hero */}
-      <div className="bg-blue-50/95 backdrop-blur-xs border border-blue-200/90 rounded-2xl p-3.5 sm:p-4 flex items-start gap-3 shadow-2xs">
-        <div className="p-1 rounded-full bg-blue-100 text-blue-700 flex-shrink-0 mt-0.5">
-          <AlertCircle className="w-4 h-4 text-blue-700" />
-        </div>
-        <div className="text-xs font-semibold text-blue-950 leading-relaxed">
-          {t.bannerNotice}
-        </div>
-      </div>
-
-      {/* 4. "Find your name in the voter list" Card */}
+      {/* 3. "Find your name in the voter list" Card */}
       <div className="bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-6 space-y-3.5 transition-all">
         <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
           {t.findNameTitle}

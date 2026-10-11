@@ -145,26 +145,6 @@ export function SearchResults({
           </p>
         </div>
 
-        {onRequestAddVoter && (
-          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
-            <div className="space-y-0.5">
-              <h4 className="text-xs sm:text-sm font-black text-slate-900">
-                {t.nameNotInListTitle}
-              </h4>
-              <p className="text-[11px] text-slate-500 font-medium">
-                {t.nameNotInListDesc}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onRequestAddVoter}
-              className="px-4 py-2 rounded-xl border border-blue-600 text-blue-700 hover:bg-blue-50 font-bold text-xs transition shadow-2xs shrink-0 self-start sm:self-auto"
-            >
-              {t.requestAddBtn}
-            </button>
-          </div>
-        )}
-
         <button
           type="button"
           onClick={onReset}
