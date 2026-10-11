@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import {
+  Download,
   Search,
   ChevronDown,
   Check,
@@ -71,15 +72,32 @@ export function CandidateHeroBanner({
           </span>
         </div>
 
-        {/* Language Switcher Pill */}
-        <button
-          type="button"
-          onClick={toggleLanguage}
-          className="px-3.5 py-1 rounded-full text-xs font-extrabold border border-blue-300 bg-white/95 text-blue-800 hover:bg-blue-50 active:scale-95 shadow-2xs transition"
-          aria-label={language === 'en' ? 'Switch to Kannada' : 'Switch to English'}
-        >
-          {language === 'en' ? 'ಕನ್ನಡ' : 'English'}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Prominent App Install Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('open-pwa-install'));
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border border-blue-300 bg-white/95 text-blue-700 hover:bg-blue-50 active:scale-95 shadow-2xs transition"
+            aria-label="Install App"
+          >
+            <Download className="w-3.5 h-3.5 text-blue-600" />
+            <span>{t.pwaInstallBtn}</span>
+          </button>
+
+          {/* Language Switcher Pill */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="px-3.5 py-1 rounded-full text-xs font-extrabold border border-blue-300 bg-white/95 text-blue-800 hover:bg-blue-50 active:scale-95 shadow-2xs transition"
+            aria-label={language === 'en' ? 'Switch to Kannada' : 'Switch to English'}
+          >
+            {language === 'en' ? 'ಕನ್ನಡ' : 'English'}
+          </button>
+        </div>
       </div>
 
       {/* 2. Candidate Hero Card (Royal Blue Gradient Theme with INC Identity) */}

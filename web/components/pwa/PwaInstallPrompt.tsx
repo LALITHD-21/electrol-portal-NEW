@@ -37,11 +37,11 @@ export function PwaInstallPrompt() {
 
     setIsInstalled(isStandalone);
 
-    // 2. Check session dismissal
-    const dismissedSession = sessionStorage.getItem('pwa_prompt_dismissed');
-    if (dismissedSession === 'true') {
-      setIsDismissed(true);
-    }
+    // 2. Keep prompt accessible across visits
+    try {
+      sessionStorage.removeItem('pwa_prompt_dismissed');
+    } catch {}
+    setIsDismissed(false);
 
     // 3. Reliable iOS & iPadOS Detection (including iPadOS 13+ desktop userAgent)
     const ua = window.navigator.userAgent.toLowerCase();
@@ -74,29 +74,52 @@ export function PwaInstallPrompt() {
       setDeferredPrompt(e);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    // 5. Global listener for manual install button clicks
+    const handleOpenCustom = () => {
+      setIsDismissed(false);
+      setShowModal(true);
+      if (deferredPrompt) {
+        try {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choice: any) => {
+            if (choice.outcome === 'accepted') {
+              setIsInstalled(true);
+            }
+            setDeferredPrompt(null);
+          }).catch(() => {
+            setShowModal(true);
+          });
+        } catch {
+          setShowModal(true);
+        }
+      }
+    };
+    window.addEventListener('open-pwa-install', handleOpenCustom);
 
-    // 5. Automatic gentle prompt on iOS if not dismissed
-    if (isIosDevice && !isStandalone && dismissedSession !== 'true') {
+    // 6. Automatic gentle prompt on iOS if not standalone
+    if (isIosDevice && !isStandalone) {
       const autoTimer = setTimeout(() => {
         setShowModal(true);
       }, 2500);
       return () => {
         clearTimeout(autoTimer);
         window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('open-pwa-install', handleOpenCustom);
       };
     }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('open-pwa-install', handleOpenCustom);
     };
-  }, []);
+  }, [deferredPrompt]);
 
-  if (isInstalled || isDismissed) {
+  if (isInstalled && !showModal) {
     return null;
   }
 
   const handleInstallClick = async () => {
+    setIsDismissed(false);
     if (deferredPrompt) {
       try {
         deferredPrompt.prompt();
@@ -123,7 +146,8 @@ export function PwaInstallPrompt() {
   return (
     <>
       {/* Sleek Floating Install Pill / Banner */}
-      <div className="w-full max-w-2xl mx-auto px-2 animate-fadeIn">
+      {!isDismissed && !isInstalled && (
+        <div className="w-full max-w-2xl mx-auto px-2 animate-fadeIn">
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 rounded-2xl p-2.5 sm:p-3 text-white shadow-md shadow-blue-900/10 border border-blue-400/40 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-white p-1 flex-shrink-0 flex items-center justify-center shadow-xs border border-blue-200/50">
@@ -171,6 +195,7 @@ export function PwaInstallPrompt() {
           </div>
         </div>
       </div>
+    )}
 
       {/* iOS / Fallback Installation Guide Modal */}
       {showModal && (
