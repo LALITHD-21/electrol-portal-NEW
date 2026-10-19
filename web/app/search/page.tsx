@@ -5,7 +5,7 @@ import { useSearch } from '@/features/search/hooks/useSearch';
 import { SearchResultRow } from '@/features/search/types';
 import { SearchFilters } from '@/features/search/components/SearchFilters';
 import { SearchResults } from '@/features/search/components/SearchResults';
-import { CandidateHeroBanner } from '@/components/candidate/CandidateHeroBanner';
+import { CandidateHeroBanner, BallotGuideCard } from '@/components/candidate/CandidateHeroBanner';
 import { RequestAddVoterModal } from '@/components/requests/RequestAddVoterModal';
 import { ElectorDetailModal } from '@/components/search/ElectorDetailModal';
 import { VoterSlipModal } from '@/components/search/VoterSlipModal';
@@ -178,40 +178,62 @@ function SearchPageContent() {
           onSearchChange={handleQueryChange}
           relativeNameFilter={filters.relativeName || ''}
           onRelativeNameChange={handleRelativeNameChange}
-        />
-
-      {/* 2. Directly Under Candidate Hero: Advanced Constituency & Booth Filters */}
-      <div className="w-full max-w-2xl mx-auto space-y-3">
-        <SearchFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onClearFilters={handleClearFilters}
-        />
-      </div>
-
-      {/* 3. PWA App Installation Prompt (For Android & iOS) */}
-      <PwaInstallPrompt />
-
-      {/* 4. Live Search Results List */}
-      <div className="w-full max-w-2xl mx-auto">
-        <SearchResults
-          results={results}
-          total={total}
-          page={page}
-          pageSize={pageSize}
-          queryType={queryType}
-          durationMs={durationMs}
-          boothInfo={boothInfo}
           isLoading={isLoading}
-          error={error}
-          searchQuery={query}
-          hasQueryOrFilter={hasQueryOrFilter}
-          onPageChange={handlePageChange}
-          onReset={handleClearAll}
-          onRequestAddVoter={handleOpenAddRequest}
-          onSelectElector={handleSelectElector}
+          showBallotGuide={!hasQueryOrFilter}
         />
-      </div>
+
+        {/* 2. When searching: Search Results appear IMMEDIATELY below Search Box! */}
+        {hasQueryOrFilter ? (
+          <>
+            <div id="search-results-section" className="w-full max-w-2xl mx-auto scroll-mt-4">
+              <SearchResults
+                results={results}
+                total={total}
+                page={page}
+                pageSize={pageSize}
+                queryType={queryType}
+                durationMs={durationMs}
+                boothInfo={boothInfo}
+                isLoading={isLoading}
+                error={error}
+                searchQuery={query}
+                hasQueryOrFilter={hasQueryOrFilter}
+                onPageChange={handlePageChange}
+                onReset={handleClearAll}
+                onRequestAddVoter={handleOpenAddRequest}
+                onSelectElector={handleSelectElector}
+              />
+            </div>
+
+            {/* Advanced Filters (Accessible below search results during active search) */}
+            <div className="w-full max-w-2xl mx-auto space-y-3 pt-2">
+              <SearchFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onClearFilters={handleClearFilters}
+              />
+            </div>
+
+            {/* Official Ballot Paper Voting Guide Card */}
+            <div className="w-full max-w-2xl mx-auto pt-1">
+              <BallotGuideCard />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Idle State: Constituency & Booth Filters */}
+            <div className="w-full max-w-2xl mx-auto space-y-3">
+              <SearchFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onClearFilters={handleClearFilters}
+              />
+            </div>
+          </>
+        )}
+
+        {/* 3. PWA App Installation Prompt (For Android & iOS) */}
+        <PwaInstallPrompt />
 
       {/* 5. Official Electoral Compliance & Privacy Footer */}
       <footer className="w-full max-w-2xl mx-auto text-center text-[11px] text-slate-400 font-medium pt-4 pb-9 space-y-1.5 select-none">

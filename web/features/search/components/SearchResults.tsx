@@ -230,20 +230,14 @@ export function SearchResults({
 
       {/* 2-Column Responsive Grid Layout */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
-        {results.map((row, idx) => (
-          <AnimatedItem
-            key={row.id}
-            index={idx}
-            delay={Math.min(idx * 0.02, 0.1)}
-            threshold={0.15}
-            className="h-full"
-          >
+        {results.map((row) => (
+          <div key={row.id} className="h-full">
             <SearchRow
               row={row}
               searchQuery={searchQuery}
               onSelect={onSelectElector}
             />
-          </AnimatedItem>
+          </div>
         ))}
       </div>
 

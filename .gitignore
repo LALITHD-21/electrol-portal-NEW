@@ -72,6 +72,7 @@ etl/reports/
 112_1791587543.pdf.pdf.xlsx
 
 # --- Local SQLite DB & Heavy CSV dumps (>70MB) ---
-*.db
+/electors.db
+!web/electors.db
 *_backup.*
 electors_number*.csv

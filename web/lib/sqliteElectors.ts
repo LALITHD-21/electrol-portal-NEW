@@ -16,9 +16,15 @@ function getSqliteDb(): any | null {
   try {
     const candidates = [
       path.join(process.cwd(), 'electors.db'),
-      path.join(process.cwd(), 'web/electors.db'),
-      path.join(__dirname, '../electors.db'),
-      path.join(__dirname, '../../electors.db'),
+      path.join(process.cwd(), 'web', 'electors.db'),
+      path.join(process.cwd(), '..', 'electors.db'),
+      path.resolve(process.cwd(), 'electors.db'),
+      path.resolve(process.cwd(), 'web', 'electors.db'),
+      path.join(__dirname, 'electors.db'),
+      path.join(__dirname, '..', 'electors.db'),
+      path.join(__dirname, '..', '..', 'electors.db'),
+      path.join(__dirname, '..', '..', '..', 'electors.db'),
+      path.join(__dirname, '..', '..', '..', '..', 'electors.db'),
     ];
 
     let dbPath = '';

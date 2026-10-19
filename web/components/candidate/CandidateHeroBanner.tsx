@@ -10,6 +10,7 @@ import {
   Sparkles,
   ClipboardList,
   X,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -29,6 +30,8 @@ export interface CandidateHeroBannerProps {
   onSelectPlace?: (place: string) => void;
   relativeNameFilter?: string;
   onRelativeNameChange?: (val: string) => void;
+  isLoading?: boolean;
+  showBallotGuide?: boolean;
 }
 
 export function CandidateHeroBanner({
@@ -45,6 +48,8 @@ export function CandidateHeroBanner({
   onSelectPlace,
   relativeNameFilter = '',
   onRelativeNameChange,
+  isLoading = false,
+  showBallotGuide = true,
 }: CandidateHeroBannerProps) {
   const [showRelativeInput, setShowRelativeInput] = useState(Boolean(relativeNameFilter));
 
@@ -187,18 +192,50 @@ export function CandidateHeroBanner({
         </h3>
 
         {/* Search Input Box */}
-        <div className="relative flex items-center bg-slate-50/90 rounded-2xl border border-slate-200 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100/70 focus-within:bg-white transition-all">
-          <div className="pl-3.5 pr-1.5 text-slate-400 flex items-center justify-center">
-            <Search className="w-5 h-5 text-slate-400" />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+          }}
+          className="relative flex items-center bg-slate-50/90 rounded-2xl border border-slate-200 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100/70 focus-within:bg-white transition-all shadow-inner"
+        >
+          <div className="pl-3.5 pr-1.5 text-slate-400 flex items-center justify-center shrink-0">
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+            ) : (
+              <Search className="w-5 h-5 text-slate-400" />
+            )}
           </div>
           <input
-            type="text"
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
             placeholder={t.searchPlaceholder}
-            className="w-full min-h-[46px] py-2.5 pr-4 text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal bg-transparent focus:outline-none"
+            className="w-full min-h-[46px] py-2.5 pr-2 text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal bg-transparent focus:outline-none"
           />
-        </div>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange?.('')}
+              className="p-1.5 mr-1 text-slate-400 hover:text-slate-600 focus:outline-none rounded-full"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            type="submit"
+            className="mr-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition shrink-0"
+          >
+            {language === 'kn' ? 'ಹುಡುಕಿ' : 'Search'}
+          </button>
+        </form>
 
         {/* Accordion: + Add father / husband name */}
         <div className="pt-0.5">
@@ -247,41 +284,48 @@ export function CandidateHeroBanner({
       </div>
 
       {/* 4. Official Ballot Paper Voting Guide Card */}
-      <div className="bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-5 space-y-3.5 transition-all overflow-hidden">
-        {/* Header with Title and Sl. No. Badge */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-blue-100 text-blue-700 font-black text-xs shadow-2xs shrink-0">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-            </span>
-            <div className="min-w-0">
-              <h4 className="text-xs sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
-                <span>{t.ballotGuideBadge}</span>
-              </h4>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
-                {t.ballotInstructionHeader}
-              </p>
-            </div>
-          </div>
+      {showBallotGuide && <BallotGuideCard />}
+    </div>
+  );
+}
 
-          <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xs shrink-0 whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <span>{t.ballotSlNoBadge}</span>
+export function BallotGuideCard() {
+  const { t } = useLanguage();
+  return (
+    <div className="bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-soft-sm p-4 sm:p-5 space-y-3.5 transition-all overflow-hidden">
+      {/* Header with Title and Sl. No. Badge */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-blue-100 text-blue-700 font-black text-xs shadow-2xs shrink-0">
+            <Sparkles className="w-4 h-4 text-blue-600" />
           </span>
+          <div className="min-w-0">
+            <h4 className="text-xs sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
+              <span>{t.ballotGuideBadge}</span>
+            </h4>
+            <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
+              {t.ballotInstructionHeader}
+            </p>
+          </div>
         </div>
 
-        {/* Prominent, Large & Perfectly Aligned Ballot Paper Specimen */}
-        <div className="relative w-full aspect-[546/187] rounded-2xl overflow-hidden bg-white shadow-soft-xs border border-slate-200/90">
-          <Image
-            src="/ballot-candidate-guide.png"
-            alt="Ballot Paper Specimen - Shashi Hulikuntemutt Sl. No. 1"
-            fill
-            priority
-            unoptimized
-            sizes="(max-width: 640px) 100vw, 672px"
-            className="object-contain w-full h-full"
-          />
-        </div>
+        <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xs shrink-0 whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          <span>{t.ballotSlNoBadge}</span>
+        </span>
+      </div>
+
+      {/* Prominent, Large & Perfectly Aligned Ballot Paper Specimen */}
+      <div className="relative w-full aspect-[546/187] rounded-2xl overflow-hidden bg-white shadow-soft-xs border border-slate-200/90">
+        <Image
+          src="/ballot-candidate-guide.png"
+          alt="Ballot Paper Specimen - Shashi Hulikuntemutt Sl. No. 1"
+          fill
+          priority
+          unoptimized
+          sizes="(max-width: 640px) 100vw, 672px"
+          className="object-contain w-full h-full"
+        />
       </div>
     </div>
   );

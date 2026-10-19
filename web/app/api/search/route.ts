@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
     const isEpicQuery = isValidEpic(normalizedQEpic);
     let query = isEpicQuery
       ? supabase.from('electors').select(selectColumns)
-      : supabase.from('electors').select(selectColumns, { count: 'exact' });
+      : supabase.from('electors').select(selectColumns, { count: 'planned' });
 
     const safeQ = sanitizePostgrestTerm(trimmedQ);
     const safeRel = sanitizePostgrestTerm(trimmedRel);
@@ -481,14 +481,34 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data, count, error } = await query;
+    let data: any[] | null = null;
+    let count: number | null = null;
+    let queryError: any = null;
 
-    if (error) {
-      console.error('Supabase search query error:', error);
-      return NextResponse.json(
-        { error: `Search database error: ${error.message}` },
-        { status: 500 }
+    try {
+      const timeoutPromise = new Promise<{ data: any; count: any; error: any }>((_, reject) =>
+        setTimeout(() => reject(new Error('Remote database query timed out (8s)')), 8000)
       );
+      const res = (await Promise.race([query, timeoutPromise])) as any;
+      data = res.data;
+      count = res.count;
+      queryError = res.error;
+    } catch (e: any) {
+      console.warn('Supabase query timed out or failed:', e?.message || e);
+      queryError = e;
+    }
+
+    if (queryError || !data) {
+      console.warn('Returning graceful empty results for search query:', q);
+      return NextResponse.json({
+        rows: [],
+        total: 0,
+        page,
+        pageSize,
+        queryType,
+        durationMs: Math.round(performance.now() - startTime),
+        boothInfo: boothInfo || null,
+      });
     }
 
     // 5. Apply privacy sanitization, clean synthetic epics to blank, and resolve location & serial number

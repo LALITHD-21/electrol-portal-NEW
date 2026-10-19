@@ -2,6 +2,11 @@
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/**/*': ['./electors.db', './lib/phone_lookup.json'],
+    },
+  },
   async headers() {
     return [
       {
