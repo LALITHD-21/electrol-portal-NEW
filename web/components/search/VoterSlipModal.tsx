@@ -85,7 +85,7 @@ export function VoterSlipModal({
 ━━━━━━━━━━━━━━━━━━━
 👤 *ಹೆಸರು / Name:* ${electorName}
 👨‍👩‍👧 *ತಂದೆ/ತಾಯಿ/ಪತಿ:* ${relativeName}
-🆔 *EPIC No:* ${epic}
+🆔 *EPIC No:* ${epic || '—'}
 🏛️ *ಭಾಗ ಸಂಖ್ಯೆ / Part No:* ${partNo}${pollingInfo.isAuxiliary ? ' (Auxiliary Booth)' : ''}
 🔢 *ಕ್ರಮ ಸಂಖ್ಯೆ / Serial No:* ${serialNo}
 📍 *ತಾಲ್ಲೂಕು / Taluk:* ${talukCity}
@@ -383,7 +383,7 @@ Vote on polling day!`;
                     EPIC No. / ಎಪಿಕ್ ಸಂಖ್ಯೆ
                   </div>
                   <div className="font-mono text-sm sm:text-base font-bold text-slate-900 tracking-wide">
-                    {epic}
+                    {epic || '—'}
                   </div>
                 </div>
 

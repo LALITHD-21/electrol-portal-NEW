@@ -91,9 +91,11 @@ export function SearchRow({ row, searchQuery, onSelect }: SearchRowProps) {
 
         {/* EPIC Badge + Taluk Chip */}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          <span className="font-mono font-black text-xs text-blue-950 bg-blue-50/90 border border-blue-200/80 px-2 py-0.5 rounded-md">
-            <HighlightText text={formatEpicForDisplay(row.epic_number)} query={searchQuery} />
-          </span>
+          {formatEpicForDisplay(row.epic_number) ? (
+            <span className="font-mono font-black text-xs text-blue-950 bg-blue-50/90 border border-blue-200/80 px-2 py-0.5 rounded-md">
+              <HighlightText text={formatEpicForDisplay(row.epic_number)} query={searchQuery} />
+            </span>
+          ) : null}
           <span className="font-sans font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[11px]">
             {talukCity}
           </span>

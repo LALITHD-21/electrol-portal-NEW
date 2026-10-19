@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 import { searchQuerySchema } from '@/features/search/schema';
 import { SearchApiResponse, SearchResultRow, SearchQueryType } from '@/features/search/types';
-import { normalizeEpic, isValidEpic } from '@/lib/utils';
+import { normalizeEpic, isValidEpic, isSyntheticEpic } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber, BOOTH_MASTER_MAP } from '@/lib/boothMaster';
 
 export const dynamic = 'force-dynamic';
@@ -467,14 +467,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 5. Apply privacy sanitization and resolve location & serial number
+    // 5. Apply privacy sanitization, clean synthetic epics to blank, and resolve location & serial number
     const sanitizedRows: SearchResultRow[] = (data || []).map((row) => {
       const electorRow = row as SearchResultRow;
       const location = resolveElectorLocation(electorRow);
       const serial = resolveElectorSerialNumber(electorRow);
+      const isSynthetic = isSyntheticEpic(electorRow.epic_number);
+      const cleanEpic = isSynthetic ? '' : (electorRow.epic_number || '');
 
       return {
         ...electorRow,
+        epic_number: cleanEpic,
         serial_number: serial,
         taluk: location.taluk,
         district: location.district,
@@ -483,11 +486,35 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // 6. Zero-Duplication Filter: deduplicate any identical electors in search results
+    const seenSlots = new Set<string>();
+    const seenPeople = new Set<string>();
+    const deduplicatedRows: SearchResultRow[] = [];
+
+    for (const r of sanitizedRows) {
+      const partKey = String(r.part_number || '').trim();
+      const serialKey = r.serial_number !== null && r.serial_number !== undefined ? String(r.serial_number).trim() : '';
+      const nameKey = (r.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const relKey = (r.relative_name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      if (partKey && serialKey) {
+        const slotKey = `${partKey}:${serialKey}`;
+        if (seenSlots.has(slotKey)) continue;
+        seenSlots.add(slotKey);
+      }
+      if (partKey && nameKey && relKey) {
+        const personKey = `${partKey}:${nameKey}:${relKey}`;
+        if (seenPeople.has(personKey)) continue;
+        seenPeople.add(personKey);
+      }
+      deduplicatedRows.push(r);
+    }
+
     const durationMs = Math.round(performance.now() - startTime);
 
     const responsePayload: SearchApiResponse = {
-      rows: sanitizedRows,
-      total: isEpicQuery ? sanitizedRows.length : (count ?? 0),
+      rows: deduplicatedRows,
+      total: isEpicQuery ? deduplicatedRows.length : (count ?? 0),
       page,
       pageSize,
       queryType,

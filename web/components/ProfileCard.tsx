@@ -62,7 +62,7 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
   const handleCopyDetails = () => {
     const summary = [
       `--- ELECTOR DETAILS SLIP ---`,
-      `EPIC Number: ${formattedEpic}`,
+      formattedEpic ? `EPIC Number: ${formattedEpic}` : null,
       `Name: ${elector.name}`,
       elector.relative_name ? `Father / Husband: ${elector.relative_name}` : null,
       elector.age ? `Age: ${elector.age} yrs` : null,
@@ -110,7 +110,7 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
             <span>EPIC</span>
           </div>
           <span className="epic-mono text-lg sm:text-2xl font-black text-slate-900 tracking-wider whitespace-nowrap">
-            {formattedEpic}
+            {formattedEpic || '—'}
           </span>
         </div>
 

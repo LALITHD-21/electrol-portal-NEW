@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { Elector } from '@/lib/types';
 import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
+import { isSyntheticEpic } from '@/lib/utils';
 
 export async function GET(
   request: NextRequest,
@@ -53,6 +54,7 @@ export async function GET(
       taluk: location.taluk,
       district: location.district,
       ac_name: location.ac_name,
+      epic_number: isSyntheticEpic(data.epic_number) ? '' : (data.epic_number || ''),
     };
     if (isPublic) {
       electorRecord.whatsapp_mob = null;

@@ -17,13 +17,29 @@ export function normalizeEpic(input: string | null | undefined): string {
 }
 
 /**
+ * Detect synthetic, placeholder, or dummy EPIC numbers.
+ * Examples: P21_0843, P21_SP_00843, P112_SP_01692, P137_0380, NULL, NONE.
+ * When a voter has no authentic EPIC number, they should be treated as blank.
+ */
+export function isSyntheticEpic(epic: string | null | undefined): boolean {
+    if (!epic) return true;
+    const str = String(epic).trim().toUpperCase();
+    if (!str || str === '—' || str === 'NULL' || str === 'NONE' || str === 'NIL' || str === 'NA') return true;
+    if (str.includes('_')) return true;
+    if (/^P\d{1,4}/.test(str)) return true;
+    return false;
+}
+
+/**
  * Validate that an EPIC number matches a valid electoral card format.
  * - Standard EPIC: 2 to 5 letters followed by 4 to 9 digits (e.g. TYA0633792, WWS579886, BRW302298).
  * - OCR / legacy format: 7 to 13 alphanumeric chars containing at least 1 letter and at least 4 digits.
  * - Pure letters (e.g. 'SANTHOSH SN', 'RAMESHKUMAR') or pure numbers ('9876543210', '347') are NEVER valid EPICs.
+ * - Synthetic/placeholder IDs (e.g. 'P21_0843', 'P21_SP_00843') are NEVER valid EPICs.
  */
 export function isValidEpic(epic: string | null | undefined): boolean {
     if (!epic) return false;
+    if (isSyntheticEpic(epic)) return false;
     const str = String(epic).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (str.length < 7 || str.length > 13) return false;
 
@@ -52,12 +68,12 @@ export function isValidEpic(epic: string | null | undefined): boolean {
 /**
  * Format an EPIC number for display.
  * Adds a space between letter prefix and number suffix for readability (e.g. 'TYA 0633792', 'WWS 579886').
- * 100% null-safe: returns '—' if null or empty.
+ * If the voter does not have an authentic EPIC number (missing or synthetic), returns '' (blank).
  */
 export function formatEpicForDisplay(epic: string | null | undefined): string {
-    if (!epic) return '—';
+    if (!epic || isSyntheticEpic(epic)) return '';
     const str = String(epic).trim();
-    if (!str) return '—';
+    if (!str) return '';
     const match = str.match(/^([A-Z]{2,4})(\d+)$/);
     if (match) {
         return `${match[1]} ${match[2]}`;
