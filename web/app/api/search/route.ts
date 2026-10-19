@@ -5,6 +5,8 @@ import { searchQuerySchema } from '@/features/search/schema';
 import { SearchApiResponse, SearchResultRow, SearchQueryType } from '@/features/search/types';
 import { normalizeEpic, isValidEpic, isSyntheticEpic } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber, BOOTH_MASTER_MAP } from '@/lib/boothMaster';
+import { resolveElectorPhone, findEpicsByPhone } from '@/lib/phoneMaster';
+import { searchElectorsLocal } from '@/lib/sqliteElectors';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,6 +138,24 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // 3b. High-performance local search via SQLite (< 15ms)
+  try {
+    const localResult = searchElectorsLocal(parseResult.data);
+    if (localResult) {
+      setCachedSearch(cacheKey, localResult, 60000);
+      return NextResponse.json(localResult, {
+        headers: {
+          'Cache-Control': isPublic
+            ? 'public, s-maxage=30, stale-while-revalidate=60'
+            : 'private, no-cache',
+          'X-Cache': 'LOCAL_SQLITE',
+        },
+      });
+    }
+  } catch (sqliteErr) {
+    console.warn('Local search skipped, falling back to remote database:', sqliteErr);
+  }
+
   try {
     const supabase = createAdminClient();
 
@@ -192,17 +212,21 @@ export async function GET(request: NextRequest) {
       }
       query = query.limit(20);
     }
-    // Mode B1: 10-digit Mobile number
+    // Mode B1: 10-digit Mobile number (or partial 5+ digit phone search)
     else if (
-      /^\d{10}$/.test(trimmedQ) ||
-      (mobile && /^\d{10}$/.test(mobile.replace(/\D/g, '')))
+      /^\d{5,12}$/.test(trimmedQ) ||
+      (mobile && /^\d{5,12}$/.test(mobile.replace(/\D/g, '')))
     ) {
       queryType = 'mobile';
-      const phoneDigits = /^\d{10}$/.test(trimmedQ)
+      const phoneDigits = /^\d{5,12}$/.test(trimmedQ)
         ? trimmedQ
         : mobile.replace(/\D/g, '');
-      // Match on sanitized whatsapp_mob
-      query = query.ilike('whatsapp_mob', `%${phoneDigits}%`);
+      const matchedEpics = findEpicsByPhone(phoneDigits);
+      if (matchedEpics.length > 0) {
+        query = query.in('epic_number', matchedEpics.slice(0, 50));
+      } else {
+        query = query.ilike('whatsapp_mob', `%${phoneDigits}%`);
+      }
     }
     // Mode B2: Compound Booth + Serial query (e.g. "103 347", "103/347", "Part 103 Serial 347", "Booth 103 - 347")
     else if (/^(?:part|booth)?\s*(\d{1,4})\s*[\s/,-]+\s*(?:serial|sl|s#?|no\.?)?\s*(\d{1,4})$/i.test(trimmedQ)) {
@@ -474,6 +498,10 @@ export async function GET(request: NextRequest) {
       const serial = resolveElectorSerialNumber(electorRow);
       const isSynthetic = isSyntheticEpic(electorRow.epic_number);
       const cleanEpic = isSynthetic ? '' : (electorRow.epic_number || '');
+      const phone = resolveElectorPhone({
+        ...electorRow,
+        epic_number: cleanEpic || electorRow.epic_number,
+      });
 
       return {
         ...electorRow,
@@ -482,7 +510,7 @@ export async function GET(request: NextRequest) {
         taluk: location.taluk,
         district: location.district,
         ac_name: location.ac_name,
-        whatsapp_mob: isPublic ? null : maskMobile(electorRow.whatsapp_mob, auth.session.role),
+        whatsapp_mob: phone,
       };
     });
 

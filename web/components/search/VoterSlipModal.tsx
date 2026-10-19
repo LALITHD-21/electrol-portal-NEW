@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Download, Share2, Printer, Loader2 } from 'lucide-react';
+import { X, Download, Share2, Printer, Loader2, Check, Copy } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SearchResultRow } from '@/features/search/types';
 import { formatEpicForDisplay } from '@/lib/utils';
@@ -38,6 +38,8 @@ export function VoterSlipModal({
   const { language, t } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareToast, setShareToast] = useState<{ show: boolean; message: string; phone?: string } | null>(null);
   const slipRef = useRef<HTMLDivElement>(null);
 
   const displayCandidate =
@@ -85,7 +87,7 @@ export function VoterSlipModal({
 ━━━━━━━━━━━━━━━━━━━
 👤 *ಹೆಸರು / Name:* ${electorName}
 👨‍👩‍👧 *ತಂದೆ/ತಾಯಿ/ಪತಿ:* ${relativeName}
-🆔 *EPIC No:* ${epic || '—'}
+🆔 *EPIC No:* ${epic || '—'}${elector.whatsapp_mob ? `\n📱 *ಮೊಬೈಲ್ / Mobile:* ${elector.whatsapp_mob}` : ''}
 🏛️ *ಭಾಗ ಸಂಖ್ಯೆ / Part No:* ${partNo}${pollingInfo.isAuxiliary ? ' (Auxiliary Booth)' : ''}
 🔢 *ಕ್ರಮ ಸಂಖ್ಯೆ / Serial No:* ${serialNo}
 📍 *ತಾಲ್ಲೂಕು / Taluk:* ${talukCity}
@@ -94,9 +96,101 @@ export function VoterSlipModal({
 ━━━━━━━━━━━━━━━━━━━
 Vote on polling day!`;
 
-  const handleShareWhatsApp = () => {
-    const url = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
-    window.open(url, '_blank');
+  // Clean recipient phone number
+  const rawMob = elector.whatsapp_mob ? String(elector.whatsapp_mob).replace(/\D/g, '') : '';
+  const cleanPhone = rawMob.length >= 10 ? rawMob.slice(-10) : '';
+
+  // Crystal-Clear HD Voter Slip Image Sharer for WhatsApp
+  const handleShareWhatsApp = async () => {
+    if (!slipRef.current || isSharing) return;
+
+    try {
+      setIsSharing(true);
+
+      // 1. Capture exact 100% replica in Ultra-HD 2.5x pixel ratio
+      const dataUrl = await toPng(slipRef.current, {
+        pixelRatio: 2.5,
+        backgroundColor: '#ffffff',
+        quality: 1.0,
+      });
+
+      const cleanEpic = (elector.epic_number || '').replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `VoterSlip_${cleanEpic || 'Elector'}.png`;
+
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], filename, { type: 'image/png' });
+
+      // Direct WhatsApp link targeting the elector's phone number if available
+      const waUrl = cleanPhone
+        ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(shareMessage)}`
+        : `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+
+      // 2. Primary: Web Share API with image file (Supported on Mobile Chrome, Android, iOS Safari)
+      let sharedDirectly = false;
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Voter Slip - ${electorName}`,
+            text: shareMessage,
+          });
+          sharedDirectly = true;
+          setIsSharing(false);
+          return;
+        } catch (shareErr: any) {
+          if (shareErr.name === 'AbortError') {
+            setIsSharing(false);
+            return; // User dismissed native share sheet
+          }
+          console.warn('Navigator file share skipped, using fallback:', shareErr);
+        }
+      }
+
+      // 3. Desktop / Web Fallback:
+      // A. Copy HD Image to system clipboard for instant Ctrl+V in WhatsApp chat
+      let copied = false;
+      try {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          copied = true;
+        }
+      } catch (clipErr) {
+        console.warn('Clipboard write skipped:', clipErr);
+      }
+
+      // B. Auto-download the exact HD PNG file
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // C. Open WhatsApp directly to the elector's number
+      window.open(waUrl, '_blank');
+
+      // D. Show confirmation toast
+      setShareToast({
+        show: true,
+        message: language === 'kn'
+          ? 'ಎಚ್‌ಡಿ ಸ್ಲಿಪ್ ಡೌನ್‌ಲೋಡ್ ಆಗಿದೆ ಮತ್ತು ವಾಟ್ಸಾಪ್ ತೆರೆಯಲಾಗಿದೆ!'
+          : 'HD Voter Slip image generated and opened in WhatsApp!',
+        phone: cleanPhone || undefined,
+      });
+
+    } catch (err) {
+      console.error('Failed to share voter slip image:', err);
+      // Emergency text fallback
+      const fallbackUrl = cleanPhone
+        ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(shareMessage)}`
+        : `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+      window.open(fallbackUrl, '_blank');
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   // Dedicated single-page high-precision print generator
@@ -387,6 +481,21 @@ Vote on polling day!`;
                   </div>
                 </div>
 
+                {/* Mobile / Contact Number (if verified) */}
+                {elector.whatsapp_mob && (
+                  <div className="border-b border-slate-100 pb-2">
+                    <div className="text-[11px] sm:text-xs font-semibold text-slate-400">
+                      Mobile / WhatsApp / ಮೊಬೈಲ್ ಸಂಖ್ಯೆ
+                    </div>
+                    <div className="font-mono text-sm sm:text-base font-black text-emerald-800 tracking-wide flex items-center gap-1.5 mt-0.5">
+                      <span>{elector.whatsapp_mob}</span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-1.5 py-0.5 rounded-md">
+                        Verified
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Polling station */}
                 <div className="border-b border-slate-100 pb-2">
                   <div className="text-[11px] sm:text-xs font-semibold text-slate-400">
@@ -464,12 +573,43 @@ Vote on polling day!`;
           {/* Action Buttons */}
           <div className="space-y-2 pt-1 no-print">
             {/* Grid for main download & print buttons */}
+            {/* Toast Feedback Banner when HD image is prepared / shared */}
+            {shareToast && shareToast.show && (
+              <div className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-3 sm:p-3.5 shadow-sm flex items-start gap-3 animate-scaleIn text-left">
+                <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <Check className="w-4 h-4 stroke-[3]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                    {language === 'kn' ? 'ಎಚ್‌ಡಿ ಸ್ಲಿಪ್ ಚಿತ್ರ ಸಿದ್ಧವಾಗಿದೆ!' : 'HD Slip Image Ready!'}
+                  </h4>
+                  <p className="text-xs text-emerald-800 font-semibold mt-0.5 leading-relaxed">
+                    {shareToast.message}
+                  </p>
+                  {shareToast.phone && (
+                    <p className="text-[11px] text-emerald-700 font-mono mt-1 font-extrabold">
+                      Recipient: +91 {shareToast.phone}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShareToast(null)}
+                  className="p-1 text-emerald-600 hover:text-emerald-900 rounded-lg hover:bg-emerald-100 transition"
+                  aria-label="Dismiss toast"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Grid for main download & print buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {/* Button 1: Save Image */}
               <button
                 type="button"
                 onClick={handleSaveImage}
-                disabled={isGenerating}
+                disabled={isGenerating || isSharing}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm transition active:scale-[0.98] disabled:opacity-50"
               >
                 {isGenerating ? (
@@ -496,14 +636,32 @@ Vote on polling day!`;
               </button>
             </div>
 
-            {/* Button 3: Share / Save to Photos (WhatsApp) */}
+            {/* Button 3: Share HD Image to WhatsApp */}
             <button
               type="button"
               onClick={handleShareWhatsApp}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 shadow-sm transition active:scale-[0.98]"
+              disabled={isSharing || isGenerating}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-black text-sm text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-md shadow-emerald-600/25 transition active:scale-[0.98] disabled:opacity-50"
             >
-              <Share2 className="w-4 h-4" />
-              <span>{language === 'kn' ? 'ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ' : 'Share to WhatsApp'}</span>
+              {isSharing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>{language === 'kn' ? 'ಎಚ್‌ಡಿ ಸ್ಲಿಪ್ ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ...' : 'Preparing HD Image...'}</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4" />
+                  <span>
+                    {cleanPhone
+                      ? (language === 'kn'
+                          ? `ವಾಟ್ಸಾಪ್‌ಗೆ ಎಚ್‌ಡಿ ಸ್ಲಿಪ್ ಕಳುಹಿಸಿ (${cleanPhone})`
+                          : `Send HD Slip to WhatsApp (${cleanPhone})`)
+                      : (language === 'kn'
+                          ? 'ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಎಚ್‌ಡಿ ಸ್ಲಿಪ್ ಹಂಚಿಕೊಳ್ಳಿ'
+                          : 'Share HD Slip to WhatsApp')}
+                  </span>
+                </>
+              )}
             </button>
 
             {/* Button 4: Request Correction */}

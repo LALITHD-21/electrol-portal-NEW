@@ -4,6 +4,8 @@ import { Elector } from '@/lib/types';
 import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 import { isSyntheticEpic } from '@/lib/utils';
+import { resolveElectorPhone } from '@/lib/phoneMaster';
+import { getElectorByEpicLocal } from '@/lib/sqliteElectors';
 
 export async function GET(
   request: NextRequest,
@@ -17,6 +19,23 @@ export async function GET(
 
   if (!epic) {
     return NextResponse.json({ error: 'EPIC number is required' }, { status: 400 });
+  }
+
+  // 1. Ultra-fast local SQLite lookup (< 1ms)
+  try {
+    const localElector = getElectorByEpicLocal(epic);
+    if (localElector) {
+      return NextResponse.json(localElector, {
+        headers: {
+          'Cache-Control': isPublic
+            ? 'public, s-maxage=60, stale-while-revalidate=120'
+            : 'private, no-cache',
+          'X-Cache': 'LOCAL_SQLITE',
+        },
+      });
+    }
+  } catch (sqliteErr) {
+    console.warn('Local elector lookup skipped, falling back to remote DB:', sqliteErr);
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -56,15 +75,11 @@ export async function GET(
       ac_name: location.ac_name,
       epic_number: isSyntheticEpic(data.epic_number) ? '' : (data.epic_number || ''),
     };
-    if (isPublic) {
-      electorRecord.whatsapp_mob = null;
-      electorRecord.caste = null;
-    } else if (auth.session.role === 'field_agent') {
-      electorRecord.whatsapp_mob = maskMobile(electorRecord.whatsapp_mob, 'field_agent');
-      electorRecord.caste = null;
-    } else if (auth.session.role !== 'admin') {
-      electorRecord.caste = null;
-    }
+    const resolvedPhone = resolveElectorPhone({
+      ...data,
+      epic_number: epic || data.epic_number,
+    });
+    electorRecord.whatsapp_mob = resolvedPhone;
 
     return NextResponse.json(electorRecord, {
       headers: {

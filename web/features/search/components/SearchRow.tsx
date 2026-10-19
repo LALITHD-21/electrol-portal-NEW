@@ -4,7 +4,7 @@ import React from 'react';
 import { SearchResultRow } from '../types';
 import { formatEpicForDisplay } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
-import { ChevronRight, Download } from 'lucide-react';
+import { ChevronRight, Download, Phone } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export interface SearchRowProps {
@@ -89,7 +89,7 @@ export function SearchRow({ row, searchQuery, onSelect }: SearchRowProps) {
           <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
         </div>
 
-        {/* EPIC Badge + Taluk Chip */}
+        {/* EPIC Badge + Taluk Chip + Phone Badge */}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
           {formatEpicForDisplay(row.epic_number) ? (
             <span className="font-mono font-black text-xs text-blue-950 bg-blue-50/90 border border-blue-200/80 px-2 py-0.5 rounded-md">
@@ -99,6 +99,12 @@ export function SearchRow({ row, searchQuery, onSelect }: SearchRowProps) {
           <span className="font-sans font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[11px]">
             {talukCity}
           </span>
+          {row.whatsapp_mob ? (
+            <span className="inline-flex items-center gap-1 font-mono font-extrabold text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/90 px-2 py-0.5 rounded-md">
+              <Phone className="w-2.5 h-2.5 text-emerald-600" />
+              <span>{row.whatsapp_mob}</span>
+            </span>
+          ) : null}
         </div>
       </div>
 

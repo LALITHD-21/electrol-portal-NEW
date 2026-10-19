@@ -215,7 +215,7 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
         {/* ═══════════════════════════════════════════════════
             SECTION 2: WhatsApp / Mobile Contact
            ═══════════════════════════════════════════════════ */}
-        {phoneDisplay && (
+        {phoneDisplay ? (
           <div className="flex items-center justify-between gap-2.5 sm:gap-4 bg-gradient-to-r from-emerald-50/90 via-emerald-50/50 to-white p-3.5 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-2xs group hover:border-emerald-300 transition-all">
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
               <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center flex-shrink-0 text-emerald-700 shadow-2xs group-hover:scale-105 transition-transform">
@@ -244,6 +244,16 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
                 <span>WhatsApp</span>
               </a>
             )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200/60 shadow-2xs text-slate-500">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 text-slate-400">
+              <Phone className="w-4 h-4" />
+            </div>
+            <div className="text-xs">
+              <span className="font-bold text-slate-700 block">Mobile Number: Not in Official Roll</span>
+              <span className="text-[11px] text-slate-400">Official Election Commission roll does not publish phone numbers for this elector</span>
+            </div>
           </div>
         )}
 
