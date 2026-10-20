@@ -19,7 +19,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { SearchResultRow } from '@/features/search/types';
-import { formatEpicForDisplay, getInitials } from '@/lib/utils';
+import { formatEpicForDisplay, getInitials, isValidIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -52,14 +52,16 @@ export function ElectorDetailModal({
   const relativeName = elector.relative_name || '—';
   const epic = formatEpicForDisplay(elector.epic_number || '');
   const talukCity = elector.taluk || loc.taluk || loc.district || 'Tumkur';
-  const area = elector.village || elector.address || `${loc.taluk}, ${loc.district}`;
+  const cleanAddr = sanitizeDisplayLocation(elector.village || elector.address);
+  const area = cleanAddr || `${loc.taluk}, ${loc.district}`;
 
-  const phoneDisplay = elector.whatsapp_mob
-    ? String(elector.whatsapp_mob).replace(/\D/g, '').length === 10
-      ? `${String(elector.whatsapp_mob).replace(/\D/g, '').slice(0, 5)}\u00A0${String(elector.whatsapp_mob).replace(/\D/g, '').slice(5)}`
-      : elector.whatsapp_mob
+  const validMobile = elector.whatsapp_mob && isValidIndianMobile(elector.whatsapp_mob)
+    ? String(elector.whatsapp_mob).replace(/\D/g, '')
     : null;
-  const phoneDigits = elector.whatsapp_mob ? String(elector.whatsapp_mob).replace(/\D/g, '') : null;
+  const phoneDisplay = validMobile
+    ? `${validMobile.slice(0, 5)}\u00A0${validMobile.slice(5)}`
+    : null;
+  const phoneDigits = validMobile;
 
   const initials = getInitials(electorName);
 

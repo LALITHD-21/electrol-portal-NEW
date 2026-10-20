@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { X, Download, Share2, Printer, Loader2, Check, Copy } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SearchResultRow } from '@/features/search/types';
-import { formatEpicForDisplay } from '@/lib/utils';
+import { formatEpicForDisplay, isValidIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -78,16 +78,21 @@ export function VoterSlipModal({
   const relativeName = elector.relative_name || '—';
   const epic = formatEpicForDisplay(elector.epic_number || '');
   const talukCity = elector.taluk || loc.taluk || loc.district || 'Tumkur';
-  const boothName = pollingInfo.buildingName || elector.polling_station_name || '—';
+  const rawBoothName = pollingInfo.buildingName || elector.polling_station_name || '—';
+  const boothName = sanitizeDisplayLocation(rawBoothName) || '—';
   const boothRoom = pollingInfo.roomNumber || '';
-  const pollingArea = pollingInfo.pollingArea || elector.polling_address || elector.village || elector.address || '';
+  const rawPollingArea = pollingInfo.pollingArea || elector.polling_address || elector.village || elector.address || '';
+  const pollingArea = sanitizeDisplayLocation(rawPollingArea);
+
+  const hasValidPhone = isValidIndianMobile(elector.whatsapp_mob);
+  const cleanPhone = hasValidPhone ? String(elector.whatsapp_mob).replace(/\D/g, '') : '';
 
   // Format WhatsApp Share text
   const shareMessage = `*ಮತದಾರರ ಮಾಹಿತಿ ಚೀಟಿ / Voter Information Slip*
 ━━━━━━━━━━━━━━━━━━━
 👤 *ಹೆಸರು / Name:* ${electorName}
 👨‍👩‍👧 *ತಂದೆ/ತಾಯಿ/ಪತಿ:* ${relativeName}
-🆔 *EPIC No:* ${epic || '—'}${elector.whatsapp_mob ? `\n📱 *ಮೊಬೈಲ್ / Mobile:* ${elector.whatsapp_mob}` : ''}
+🆔 *EPIC No:* ${epic || '—'}${hasValidPhone ? `\n📱 *ಮೊಬೈಲ್ / Mobile:* ${cleanPhone}` : ''}
 🏛️ *ಭಾಗ ಸಂಖ್ಯೆ / Part No:* ${partNo}${pollingInfo.isAuxiliary ? ' (Auxiliary Booth)' : ''}
 🔢 *ಕ್ರಮ ಸಂಖ್ಯೆ / Serial No:* ${serialNo}
 📍 *ತಾಲ್ಲೂಕು / Taluk:* ${talukCity}
@@ -95,10 +100,6 @@ export function VoterSlipModal({
 📌 *ಪ್ರದೇಶ / Polling Area:* ${pollingArea}
 ━━━━━━━━━━━━━━━━━━━
 Vote on polling day!`;
-
-  // Clean recipient phone number
-  const rawMob = elector.whatsapp_mob ? String(elector.whatsapp_mob).replace(/\D/g, '') : '';
-  const cleanPhone = rawMob.length >= 10 ? rawMob.slice(-10) : '';
 
   // Crystal-Clear HD Voter Slip Image Sharer for WhatsApp
   const handleShareWhatsApp = async () => {
@@ -482,13 +483,13 @@ Vote on polling day!`;
                 </div>
 
                 {/* Mobile / Contact Number (if verified) */}
-                {elector.whatsapp_mob && (
+                {hasValidPhone && (
                   <div className="border-b border-slate-100 pb-2">
                     <div className="text-[11px] sm:text-xs font-semibold text-slate-400">
                       Mobile / WhatsApp / ಮೊಬೈಲ್ ಸಂಖ್ಯೆ
                     </div>
                     <div className="font-mono text-sm sm:text-base font-black text-emerald-800 tracking-wide flex items-center gap-1.5 mt-0.5">
-                      <span>{elector.whatsapp_mob}</span>
+                      <span>{cleanPhone}</span>
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-1.5 py-0.5 rounded-md">
                         Verified
                       </span>

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SearchResultRow } from '../types';
-import { formatEpicForDisplay } from '@/lib/utils';
+import { formatEpicForDisplay, isValidIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 import { ChevronRight, Download, Phone } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -57,10 +57,9 @@ export function SearchRow({ row, searchQuery, onSelect }: SearchRowProps) {
   const partNo = row.part_number || '1';
   const serialNo = resolveElectorSerialNumber(row);
   const talukCity = row.taluk || loc.taluk || loc.district || 'Tumkur';
-  const areaText = [
-    row.polling_station_name,
-    row.village || row.address,
-  ].filter(Boolean).join(' · ') || `${loc.taluk}, ${loc.district}`;
+  const cleanPSN = sanitizeDisplayLocation(row.polling_station_name);
+  const cleanAddr = sanitizeDisplayLocation(row.village || row.address);
+  const areaText = [cleanPSN, cleanAddr].filter(Boolean).join(' · ') || `${loc.taluk}, ${loc.district}`;
 
   return (
     <div
@@ -99,7 +98,7 @@ export function SearchRow({ row, searchQuery, onSelect }: SearchRowProps) {
           <span className="font-sans font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[11px]">
             {talukCity}
           </span>
-          {row.whatsapp_mob ? (
+          {row.whatsapp_mob && isValidIndianMobile(row.whatsapp_mob) ? (
             <span className="inline-flex items-center gap-1 font-mono font-extrabold text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/90 px-2 py-0.5 rounded-md">
               <Phone className="w-2.5 h-2.5 text-emerald-600" />
               <span>{row.whatsapp_mob}</span>

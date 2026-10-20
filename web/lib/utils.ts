@@ -96,3 +96,49 @@ export function getInitials(name: string | null | undefined): string {
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+
+/**
+ * Validate that a phone number is an authentic 10-digit Indian mobile number.
+ * - Must have exactly 10 digits (after stripping non-numeric characters).
+ * - Must start with 6, 7, 8, or 9.
+ * - Rejects dummy repeating numbers (e.g. 9999999999, 8888888888).
+ * - Rejects timestamps, booth numbers, and ward numbers (e.g. 17, 19, 20, 4460610000).
+ */
+export function isValidIndianMobile(phone: string | null | undefined): boolean {
+    if (!phone) return false;
+    const digits = String(phone).replace(/\D/g, '');
+    if (digits.length !== 10) return false;
+    if (!/^[6-9]\d{9}$/.test(digits)) return false;
+    if (/^(\d)\1{9}$/.test(digits)) return false;
+    return true;
+}
+
+/**
+ * Extract clean 10-digit Indian mobile number or return null.
+ */
+export function cleanIndianMobile(phone: string | null | undefined): string | null {
+    if (!phone) return null;
+    const digits = String(phone).replace(/\D/g, '');
+    if (isValidIndianMobile(digits)) {
+        return digits;
+    }
+    return null;
+}
+
+/**
+ * Sanitize polling station name, address, or location text.
+ * Strips out accidental database timestamps (e.g. 2026-08-25T16:11:18.119222+00:00),
+ * formula artifacts, and unwanted escape quotes.
+ */
+export function sanitizeDisplayLocation(text: string | null | undefined): string {
+    if (!text) return '';
+    let s = String(text).trim();
+    if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'none') return '';
+    // Strip ISO timestamps
+    s = s.replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:[0-9.]+(?:\+00:00|Z)?\b/gi, '').trim();
+    // Strip excel formula residuals
+    if (s.startsWith('IFERROR(') || s.startsWith('=')) return '';
+    // Strip leading/trailing bullets, commas, slashes, or dots
+    s = s.replace(/^[\s·,;/\\]+|[\s·,;/\\]+$/g, '').trim();
+    return s;
+}

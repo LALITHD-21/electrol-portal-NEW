@@ -3,7 +3,7 @@ import fs from 'fs';
 import { SearchQueryParams } from '@/features/search/schema';
 import { SearchApiResponse, SearchResultRow, SearchQueryType } from '@/features/search/types';
 import { resolveElectorLocation, resolveElectorSerialNumber, BOOTH_MASTER_MAP } from './boothMaster';
-import { normalizeEpic, isValidEpic, isSyntheticEpic } from './utils';
+import { normalizeEpic, isValidEpic, isSyntheticEpic, cleanIndianMobile, sanitizeDisplayLocation } from './utils';
 import { resolveElectorPhone, findEpicsByPhone } from './phoneMaster';
 
 let sqliteDb: any = null;
@@ -292,6 +292,7 @@ export function searchElectorsLocal(params: SearchQueryParams): SearchApiRespons
       ...r,
       epic_number: cleanEpic || r.epic_number,
     });
+    const verifiedPhone = cleanIndianMobile(phone);
 
     return {
       id: Number(r.id),
@@ -301,15 +302,15 @@ export function searchElectorsLocal(params: SearchQueryParams): SearchApiRespons
       relative_name: r.relative_name || null,
       age: r.age !== null ? Number(r.age) : null,
       sex: r.sex || null,
-      whatsapp_mob: phone || r.whatsapp_mob || null,
+      whatsapp_mob: verifiedPhone,
       district: location.district || r.district || null,
       ac_name: location.ac_name || r.ac_name || null,
       taluk: location.taluk || r.taluk || null,
       village: r.village || null,
       part_number: r.part_number || null,
-      polling_station_name: r.polling_station_name || null,
-      polling_address: r.polling_address || null,
-      address: r.address || null,
+      polling_station_name: sanitizeDisplayLocation(r.polling_station_name) || null,
+      polling_address: sanitizeDisplayLocation(r.polling_address) || null,
+      address: sanitizeDisplayLocation(r.address) || null,
       qualification: r.qualification || null,
       occupation: r.occupation || null,
     };
@@ -384,7 +385,10 @@ export function getElectorByEpicLocal(rawEpic: string): any | null {
       taluk: location.taluk || row.taluk,
       district: location.district || row.district,
       ac_name: location.ac_name || row.ac_name,
-      whatsapp_mob: phone || row.whatsapp_mob || null,
+      whatsapp_mob: cleanIndianMobile(phone),
+      polling_station_name: sanitizeDisplayLocation(row.polling_station_name) || null,
+      polling_address: sanitizeDisplayLocation(row.polling_address) || null,
+      address: sanitizeDisplayLocation(row.address) || null,
     };
   } catch (e) {
     console.error('SQLite getElectorByEpicLocal error:', e);

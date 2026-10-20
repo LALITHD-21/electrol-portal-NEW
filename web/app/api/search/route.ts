@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 import { searchQuerySchema } from '@/features/search/schema';
 import { SearchApiResponse, SearchResultRow, SearchQueryType } from '@/features/search/types';
-import { normalizeEpic, isValidEpic, isSyntheticEpic } from '@/lib/utils';
+import { normalizeEpic, isValidEpic, isSyntheticEpic, cleanIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber, BOOTH_MASTER_MAP } from '@/lib/boothMaster';
 import { resolveElectorPhone, findEpicsByPhone } from '@/lib/phoneMaster';
 import { searchElectorsLocal } from '@/lib/sqliteElectors';
@@ -530,7 +530,10 @@ export async function GET(request: NextRequest) {
         taluk: location.taluk,
         district: location.district,
         ac_name: location.ac_name,
-        whatsapp_mob: phone,
+        whatsapp_mob: cleanIndianMobile(phone),
+        polling_station_name: sanitizeDisplayLocation(electorRow.polling_station_name) || null,
+        polling_address: sanitizeDisplayLocation(electorRow.polling_address) || null,
+        address: sanitizeDisplayLocation(electorRow.address) || null,
       };
     });
 
