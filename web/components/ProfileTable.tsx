@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Elector } from '@/lib/types';
-import { formatEpicForDisplay } from '@/lib/utils';
+import { formatEpicForDisplay, formatElectorFullName } from '@/lib/utils';
 import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { Printer, FileText, Edit3 } from 'lucide-react';
 
@@ -29,8 +29,8 @@ export default function ProfileTable({ elector, onEditRequest }: ProfileTablePro
   const mainRows = [
     { label: 'EPIC Number', value: elector.epic_number, formatted: formatEpicForDisplay(elector.epic_number), isMono: true, nowrap: true },
     { label: 'Serial Number', value: elector.serial_number?.toString() || '—', isMono: true, nowrap: true },
-    { label: 'Full Name', value: elector.name },
-    { label: 'Relative Name', value: elector.relative_name || '—' },
+    { label: 'Full Name', value: formatElectorFullName(elector.name) },
+    { label: 'Relative Name', value: formatElectorFullName(elector.relative_name) },
     { label: 'Sex', value: elector.sex === 'M' ? 'Male (M)' : elector.sex === 'F' ? 'Female (F)' : (elector.sex || '—') },
     { label: 'Age', value: elector.age ? `${elector.age} years` : '—', nowrap: true },
     { label: 'WhatsApp / Mobile', value: formatPhoneDisplay(elector.whatsapp_mob), isMono: true, nowrap: true },

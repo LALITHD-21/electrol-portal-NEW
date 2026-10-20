@@ -3,7 +3,7 @@ import fs from 'fs';
 import { SearchQueryParams } from '@/features/search/schema';
 import { SearchApiResponse, SearchResultRow, SearchQueryType } from '@/features/search/types';
 import { resolveElectorLocation, resolveElectorSerialNumber, BOOTH_MASTER_MAP } from './boothMaster';
-import { normalizeEpic, isValidEpic, isSyntheticEpic, cleanIndianMobile, sanitizeDisplayLocation } from './utils';
+import { normalizeEpic, isValidEpic, isSyntheticEpic, cleanIndianMobile, sanitizeDisplayLocation, formatElectorFullName } from './utils';
 import { resolveElectorPhone, findEpicsByPhone } from './phoneMaster';
 
 let sqliteDb: any = null;
@@ -298,8 +298,8 @@ export function searchElectorsLocal(params: SearchQueryParams): SearchApiRespons
       id: Number(r.id),
       serial_number: serial,
       epic_number: cleanEpic,
-      name: r.name || '',
-      relative_name: r.relative_name || null,
+      name: r.name ? formatElectorFullName(r.name) : '',
+      relative_name: r.relative_name ? formatElectorFullName(r.relative_name) : null,
       age: r.age !== null ? Number(r.age) : null,
       sex: r.sex || null,
       whatsapp_mob: verifiedPhone,
@@ -380,6 +380,8 @@ export function getElectorByEpicLocal(rawEpic: string): any | null {
 
     return {
       ...row,
+      name: row.name ? formatElectorFullName(row.name) : '',
+      relative_name: row.relative_name ? formatElectorFullName(row.relative_name) : null,
       serial_number: serial,
       epic_number: cleanEpic,
       taluk: location.taluk || row.taluk,

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SearchResultRow } from '../types';
-import { formatEpicForDisplay, isValidIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
+import { formatEpicForDisplay, isValidIndianMobile, sanitizeDisplayLocation, formatElectorFullName } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 import { ChevronRight, Download, Phone } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -79,10 +79,10 @@ export function SearchRow({ row, searchQuery, onSelect }: SearchRowProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <h4 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-blue-700 transition truncate leading-snug">
-              <HighlightText text={row.name || '—'} query={searchQuery} />
+              <HighlightText text={formatElectorFullName(row.name)} query={searchQuery} />
             </h4>
             <p className="text-[11.5px] text-slate-600 font-medium truncate mt-0.5">
-              {t.fatherSpouseLabel} <HighlightText text={row.relative_name || '—'} query={searchQuery} />
+              {t.fatherSpouseLabel} <HighlightText text={formatElectorFullName(row.relative_name)} query={searchQuery} />
             </p>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />

@@ -98,6 +98,23 @@ export function getInitials(name: string | null | undefined): string {
 }
 
 /**
+ * Safe name normalizer that preserves all first, middle, and last names/initials with proper single spacing.
+ * - Prevents accidental concatenation or merging of trailing initials/last names (e.g. "Pooja Raj Bn", "Sanjay N Katwe").
+ * - Fixes OCR CamelCase gluing (e.g. "RojaY" -> "Roja Y", "AbhilashYS" -> "Abhilash YS", "AnilKN" -> "Anil KN").
+ * - Collapses multiple spaces into a single space.
+ * 100% null-safe.
+ */
+export function formatElectorFullName(name: string | null | undefined): string {
+    if (!name) return '—';
+    let str = String(name).trim();
+    if (!str || str.toLowerCase() === 'null' || str.toLowerCase() === 'none') return '—';
+    // Separate lowercase letters followed directly by uppercase letters (e.g., "RojaY" -> "Roja Y")
+    str = str.replace(/([a-z])([A-Z])/g, '$1 $2');
+    // Collapse redundant whitespace into exactly one space
+    return str.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * Validate that a phone number is an authentic 10-digit Indian mobile number.
  * - Must have exactly 10 digits (after stripping non-numeric characters).
  * - Must start with 6, 7, 8, or 9.

@@ -19,7 +19,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { SearchResultRow } from '@/features/search/types';
-import { formatEpicForDisplay, getInitials, isValidIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
+import { formatEpicForDisplay, getInitials, isValidIndianMobile, sanitizeDisplayLocation, formatElectorFullName } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -48,8 +48,8 @@ export function ElectorDetailModal({
   const pollingInfo = resolvePollingStationDetails(elector);
   const partNo = pollingInfo.basePartNumber;
   const serialNo = resolveElectorSerialNumber(elector);
-  const electorName = elector.name || '—';
-  const relativeName = elector.relative_name || '—';
+  const electorName = formatElectorFullName(elector.name);
+  const relativeName = formatElectorFullName(elector.relative_name);
   const epic = formatEpicForDisplay(elector.epic_number || '');
   const talukCity = elector.taluk || loc.taluk || loc.district || 'Tumkur';
   const cleanAddr = sanitizeDisplayLocation(elector.village || elector.address);
@@ -200,11 +200,11 @@ Vote on polling day!`;
                   <BadgeCheck className="w-3 h-3 text-blue-600" />
                   <span>Verified Elector</span>
                 </span>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug mt-1 truncate">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug mt-1 break-words">
                   {electorName}
                 </h3>
                 {relativeName && (
-                  <p className="text-xs text-slate-600 font-semibold mt-0.5 flex items-center justify-center sm:justify-start gap-1.5 truncate">
+                  <p className="text-xs text-slate-600 font-semibold mt-0.5 flex items-center justify-center sm:justify-start gap-1.5 break-words">
                     <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                     <span>Father / Husband: <strong className="text-slate-900">{relativeName}</strong></span>
                   </p>

@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 import { searchQuerySchema } from '@/features/search/schema';
 import { SearchApiResponse, SearchResultRow, SearchQueryType } from '@/features/search/types';
-import { normalizeEpic, isValidEpic, isSyntheticEpic, cleanIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
+import { normalizeEpic, isValidEpic, isSyntheticEpic, cleanIndianMobile, sanitizeDisplayLocation, formatElectorFullName } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber, BOOTH_MASTER_MAP } from '@/lib/boothMaster';
 import { resolveElectorPhone, findEpicsByPhone } from '@/lib/phoneMaster';
 import { searchElectorsLocal } from '@/lib/sqliteElectors';
@@ -525,6 +525,8 @@ export async function GET(request: NextRequest) {
 
       return {
         ...electorRow,
+        name: electorRow.name ? formatElectorFullName(electorRow.name) : '',
+        relative_name: electorRow.relative_name ? formatElectorFullName(electorRow.relative_name) : null,
         epic_number: cleanEpic,
         serial_number: serial,
         taluk: location.taluk,

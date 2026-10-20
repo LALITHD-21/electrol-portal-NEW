@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Elector } from '@/lib/types';
-import { formatEpicForDisplay } from '@/lib/utils';
+import { formatEpicForDisplay, formatElectorFullName } from '@/lib/utils';
 import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import PhotoPlaceholder from './PhotoPlaceholder';
 import {
@@ -47,6 +47,8 @@ function formatPhoneDisplay(phone: string | null): string | null {
 export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps) {
   const [copied, setCopied] = useState(false);
   const formattedEpic = formatEpicForDisplay(elector.epic_number);
+  const electorName = formatElectorFullName(elector.name);
+  const relativeName = formatElectorFullName(elector.relative_name);
   const pollingInfo = resolvePollingStationDetails(elector);
 
   const hasPollingData =
@@ -63,8 +65,8 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
     const summary = [
       `--- ELECTOR DETAILS SLIP ---`,
       formattedEpic ? `EPIC Number: ${formattedEpic}` : null,
-      `Name: ${elector.name}`,
-      elector.relative_name ? `Father / Husband: ${elector.relative_name}` : null,
+      `Name: ${electorName}`,
+      relativeName ? `Father / Husband: ${relativeName}` : null,
       elector.age ? `Age: ${elector.age} yrs` : null,
       elector.sex ? `Sex: ${elector.sex === 'M' ? 'Male' : elector.sex === 'F' ? 'Female' : elector.sex}` : null,
       elector.whatsapp_mob ? `WhatsApp / Mobile: ${phoneDisplay}` : null,
@@ -164,7 +166,7 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
           {/* Avatar / Photo Placeholder */}
           <div className="flex-shrink-0">
             <PhotoPlaceholder
-              name={elector.name}
+              name={electorName}
               epic={elector.epic_number}
               className="w-24 h-24 sm:w-28 sm:h-28 text-2xl sm:text-3xl"
             />
@@ -178,12 +180,12 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
                 <span>100% Verified Elector Roll</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                {elector.name}
+                {electorName}
               </h1>
               {elector.relative_name && (
                 <p className="text-xs sm:text-sm text-slate-600 mt-1 flex items-center justify-center sm:justify-start gap-1.5 font-semibold">
                   <Users className="w-4 h-4 text-brand-500 flex-shrink-0" />
-                  <span>Father / Husband: <strong className="text-slate-900">{elector.relative_name}</strong></span>
+                  <span>Father / Husband: <strong className="text-slate-900">{relativeName}</strong></span>
                 </p>
               )}
             </div>

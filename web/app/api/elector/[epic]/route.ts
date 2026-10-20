@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { Elector } from '@/lib/types';
 import { requireRole, isAuthError, maskMobile } from '@/lib/auth/roles';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
-import { isSyntheticEpic } from '@/lib/utils';
+import { isSyntheticEpic, cleanIndianMobile, sanitizeDisplayLocation, formatElectorFullName } from '@/lib/utils';
 import { resolveElectorPhone } from '@/lib/phoneMaster';
 import { getElectorByEpicLocal } from '@/lib/sqliteElectors';
 
@@ -69,6 +69,8 @@ export async function GET(
     const serial = resolveElectorSerialNumber(data);
     const electorRecord: Elector = {
       ...(data as Elector),
+      name: data.name ? formatElectorFullName(data.name) : '',
+      relative_name: data.relative_name ? formatElectorFullName(data.relative_name) : null,
       serial_number: serial,
       taluk: location.taluk,
       district: location.district,
@@ -79,7 +81,7 @@ export async function GET(
       ...data,
       epic_number: epic || data.epic_number,
     });
-    electorRecord.whatsapp_mob = resolvedPhone;
+    electorRecord.whatsapp_mob = cleanIndianMobile(resolvedPhone);
 
     return NextResponse.json(electorRecord, {
       headers: {

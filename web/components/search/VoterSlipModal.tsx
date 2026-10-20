@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { X, Download, Share2, Printer, Loader2, Check, Copy } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { SearchResultRow } from '@/features/search/types';
-import { formatEpicForDisplay, isValidIndianMobile, sanitizeDisplayLocation } from '@/lib/utils';
+import { formatEpicForDisplay, isValidIndianMobile, sanitizeDisplayLocation, formatElectorFullName } from '@/lib/utils';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
 import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -74,8 +74,8 @@ export function VoterSlipModal({
 
   const partNo = pollingInfo.boothCode || elector.part_number || '1';
   const serialNo = resolvedSerial;
-  const electorName = elector.name || '—';
-  const relativeName = elector.relative_name || '—';
+  const electorName = formatElectorFullName(elector.name);
+  const relativeName = formatElectorFullName(elector.relative_name);
   const epic = formatEpicForDisplay(elector.epic_number || '');
   const talukCity = elector.taluk || loc.taluk || loc.district || 'Tumkur';
   const rawBoothName = pollingInfo.buildingName || elector.polling_station_name || '—';

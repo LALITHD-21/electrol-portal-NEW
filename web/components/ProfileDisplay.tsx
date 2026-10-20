@@ -13,7 +13,7 @@ import EditElectorModal from './EditElectorModal';
 import { SpecularButton } from '@/components/ui/SpecularButton';
 import { ArrowLeft, Copy, Check, Loader2, Sparkles, Printer, Edit3 } from 'lucide-react';
 import { getElectorByEpic, primeElectorCache } from '@/lib/electorService';
-import { formatEpicForDisplay } from '@/lib/utils';
+import { formatEpicForDisplay, formatElectorFullName } from '@/lib/utils';
 import { resolvePollingStationDetails } from '@/lib/pollingStationMaster';
 import { saveSearchHistoryItem } from '@/lib/searchHistory';
 
@@ -80,8 +80,8 @@ export default function ProfileDisplay({
     const summary = [
       `--- ELECTOR DETAILS SLIP ---`,
       `EPIC Number: ${formatEpicForDisplay(currentElector.epic_number)}`,
-      `Name: ${currentElector.name}`,
-      currentElector.relative_name ? `Father / Husband: ${currentElector.relative_name}` : null,
+      `Name: ${formatElectorFullName(currentElector.name)}`,
+      currentElector.relative_name ? `Father / Husband: ${formatElectorFullName(currentElector.relative_name)}` : null,
       currentElector.age ? `Age: ${currentElector.age} yrs` : null,
       currentElector.sex ? `Sex: ${currentElector.sex === 'M' ? 'Male' : currentElector.sex === 'F' ? 'Female' : currentElector.sex}` : null,
       phoneDisplay ? `WhatsApp / Mobile: ${phoneDisplay}` : null,
@@ -179,7 +179,7 @@ export default function ProfileDisplay({
                     </span>
                     <div className="flex flex-wrap items-center gap-2 mt-0.5">
                       <span className="font-extrabold text-slate-900 text-base sm:text-lg">
-                        {currentElector.name}
+                        {formatElectorFullName(currentElector.name)}
                       </span>
                       <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-100 font-bold">
                         {formatEpicForDisplay(currentElector.epic_number)}
