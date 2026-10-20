@@ -50,6 +50,7 @@ function SearchPageContent() {
     useState<SearchResultRow | null>(null);
   const [selectedElectorForSlip, setSelectedElectorForSlip] =
     useState<SearchResultRow | null>(null);
+  const [autoShareWhatsApp, setAutoShareWhatsApp] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [requestModalMode, setRequestModalMode] = useState<'add' | 'correction'>('add');
   const [correctionInitialData, setCorrectionInitialData] = useState<{
@@ -110,6 +111,15 @@ function SearchPageContent() {
 
   const handleDownloadSlipFromDetail = () => {
     if (selectedElectorForDetail) {
+      setAutoShareWhatsApp(false);
+      setSelectedElectorForSlip(selectedElectorForDetail);
+      setSelectedElectorForDetail(null);
+    }
+  };
+
+  const handleShareSlipWhatsAppFromDetail = () => {
+    if (selectedElectorForDetail) {
+      setAutoShareWhatsApp(true);
       setSelectedElectorForSlip(selectedElectorForDetail);
       setSelectedElectorForDetail(null);
     }
@@ -266,18 +276,23 @@ function SearchPageContent() {
         onClose={() => setSelectedElectorForDetail(null)}
         elector={selectedElectorForDetail}
         onDownloadSlip={handleDownloadSlipFromDetail}
+        onShareSlipWhatsApp={handleShareSlipWhatsAppFromDetail}
         onRequestCorrection={handleRequestCorrectionFromDetail}
       />
 
       {/* Official Download Voter Slip Modal (Replicating Reference Image 7.42.37 AM) */}
       <VoterSlipModal
         isOpen={Boolean(selectedElectorForSlip)}
-        onClose={() => setSelectedElectorForSlip(null)}
+        onClose={() => {
+          setSelectedElectorForSlip(null);
+          setAutoShareWhatsApp(false);
+        }}
         elector={selectedElectorForSlip}
         candidateName="SHASHI HULIKUNTEMUTT"
         candidateRole="INC Candidate"
         constituencyTitle="South-East Graduates' Constituency, Karnataka"
         candidatePhotoUrl="/candidate-avatar.jpg"
+        autoShareWhatsApp={autoShareWhatsApp}
         onRequestCorrection={handleRequestCorrectionFromSlip}
       />
 

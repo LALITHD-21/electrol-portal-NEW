@@ -29,6 +29,7 @@ export interface ElectorDetailModalProps {
   onClose: () => void;
   elector: SearchResultRow | null;
   onDownloadSlip: () => void;
+  onShareSlipWhatsApp?: () => void;
   onRequestCorrection: () => void;
 }
 
@@ -37,6 +38,7 @@ export function ElectorDetailModal({
   onClose,
   elector,
   onDownloadSlip,
+  onShareSlipWhatsApp,
   onRequestCorrection,
 }: ElectorDetailModalProps) {
   const { language, t } = useLanguage();
@@ -115,23 +117,23 @@ Vote on polling day!`;
         <div className="h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 relative overflow-hidden shrink-0" />
 
         {/* Top Header Bar: EPIC + Action Chips + Close Button */}
-        <div className="bg-slate-50/95 backdrop-blur-md px-4 sm:px-6 py-3 border-b border-slate-200/80 flex items-center justify-between gap-2 shrink-0">
-          {/* EPIC Badge */}
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[11px] tracking-wider shadow-2xs shrink-0">
-              <ShieldCheck className="w-3.5 h-3.5" />
+        <div className="bg-slate-50/95 backdrop-blur-md px-3.5 sm:px-6 py-2.5 sm:py-3 border-b border-slate-200/80 flex items-center justify-between gap-2 shrink-0">
+          {/* EPIC Badge - Always Visible on Mobile */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">
+            <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] sm:text-[11px] tracking-wider shadow-2xs shrink-0">
+              <ShieldCheck className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
               <span>EPIC</span>
             </span>
-            <span className="font-mono text-sm sm:text-base font-black text-slate-900 tracking-wide truncate">
+            <span className="font-mono text-xs sm:text-base font-black text-slate-900 tracking-wide select-all">
               {epic}
             </span>
           </div>
 
           {/* Action Chips on Right */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {/* Serial Number Chip */}
-            <span className="text-[11px] font-bold text-slate-700 bg-white px-2 py-1 rounded-xl border border-slate-200 shadow-2xs font-mono">
-              <span className="text-slate-400 font-normal">Serial </span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 bg-white px-2 py-0.5 sm:py-1 rounded-xl border border-slate-200 shadow-2xs font-mono">
+              <span className="text-slate-400 font-normal">Sl </span>
               <strong className="text-blue-700">#{serialNo}</strong>
             </span>
 
@@ -139,18 +141,18 @@ Vote on polling day!`;
             <button
               onClick={handleCopyDetails}
               type="button"
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 px-2 py-1 rounded-xl border border-slate-200 shadow-2xs transition active:scale-95"
+              className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 px-2 py-0.5 sm:py-1 rounded-xl border border-slate-200 shadow-2xs transition active:scale-95"
               title="Copy details slip"
             >
               {copied ? (
                 <>
                   <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="text-emerald-700 font-extrabold">Copied</span>
+                  <span className="text-emerald-700 font-extrabold hidden xs:inline sm:inline">Copied</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3 h-3 text-slate-500" />
-                  <span>Copy</span>
+                  <span className="hidden xs:inline sm:inline">Copy</span>
                 </>
               )}
             </button>
@@ -194,12 +196,25 @@ Vote on polling day!`;
             </div>
 
             {/* Name, Relative & Verified Badge */}
-            <div className="flex-1 text-center sm:text-left space-y-2 min-w-0">
-              <div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200/80 shadow-2xs">
+            <div className="flex-1 text-center sm:text-left space-y-2.5 min-w-0 w-full">
+              {/* Badges Row: Verified + Prominent High-Visibility EPIC Badge */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/80 shadow-2xs">
                   <BadgeCheck className="w-3 h-3 text-blue-600" />
                   <span>Verified Elector</span>
                 </span>
+
+                {/* High-visibility prominent EPIC badge - impossible to miss on mobile! */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-xs border border-blue-500/30">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-200 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">EPIC:</span>
+                  <span className="font-mono text-xs sm:text-sm font-black tracking-widest text-white selection:bg-white selection:text-blue-900 select-all">
+                    {epic}
+                  </span>
+                </div>
+              </div>
+
+              <div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug mt-1 break-words">
                   {electorName}
                 </h3>
@@ -437,7 +452,7 @@ Vote on polling day!`;
             {/* Button 2: Share HD Voter Slip on WhatsApp */}
             <button
               type="button"
-              onClick={onDownloadSlip}
+              onClick={onShareSlipWhatsApp || onDownloadSlip}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-md shadow-emerald-600/20 transition active:scale-[0.99]"
             >
               <Share2 className="w-4 h-4 text-white" />

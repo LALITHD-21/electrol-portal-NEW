@@ -2,6 +2,9 @@
   "name": "elector-lookup-portal",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.x"
+  },
   "scripts": {
     "dev": "npm run dev --prefix web",
     "build": "cd web && npm install && npm run build",

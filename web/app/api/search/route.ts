@@ -50,13 +50,13 @@ function checkRateLimit(key: string, limit = 240, windowMs = 60000): boolean {
   return true;
 }
 
-// High-speed In-Memory Response Cache for repeated popular queries (60s TTL)
+// High-Speed In-Memory Response Cache for repeated popular queries (300s TTL)
 interface SearchCacheEntry {
   data: SearchApiResponse;
   expiresAt: number;
 }
 const searchResponseCache = new Map<string, SearchCacheEntry>();
-const MAX_SEARCH_CACHE_SIZE = 500;
+const MAX_SEARCH_CACHE_SIZE = 1000;
 
 function getCachedSearch(cacheKey: string): SearchApiResponse | null {
   const entry = searchResponseCache.get(cacheKey);
@@ -68,7 +68,7 @@ function getCachedSearch(cacheKey: string): SearchApiResponse | null {
   return entry.data;
 }
 
-function setCachedSearch(cacheKey: string, data: SearchApiResponse, ttlMs = 60000) {
+function setCachedSearch(cacheKey: string, data: SearchApiResponse, ttlMs = 300000) {
   if (searchResponseCache.size >= MAX_SEARCH_CACHE_SIZE) {
     // Purge oldest entries if cache limit reached
     const oldestKey = searchResponseCache.keys().next().value;
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       durationMs: Math.round(performance.now() - startTime),
     }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
         'X-Cache': 'HIT',
       },
     });
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(localResult, {
         headers: {
           'Cache-Control': isPublic
-            ? 'public, s-maxage=30, stale-while-revalidate=60'
+            ? 'public, s-maxage=120, stale-while-revalidate=300'
             : 'private, no-cache',
           'X-Cache': 'LOCAL_SQLITE',
         },
@@ -581,7 +581,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responsePayload, {
       headers: {
         'Cache-Control': isPublic
-          ? 'public, s-maxage=30, stale-while-revalidate=60'
+          ? 'public, s-maxage=120, stale-while-revalidate=300'
           : 'private, no-cache',
         'X-Cache': 'MISS',
       },

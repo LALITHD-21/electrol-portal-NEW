@@ -19,8 +19,8 @@ interface ClientSearchCacheEntry {
   timestamp: number;
 }
 const clientSearchCache = new Map<string, ClientSearchCacheEntry>();
-const MAX_CLIENT_CACHE = 150;
-const CLIENT_CACHE_TTL = 60000; // 60s TTL
+const MAX_CLIENT_CACHE = 250;
+const CLIENT_CACHE_TTL = 300000; // 5 minutes TTL for instant backspace/re-type response
 
 export function useSearch() {
   const router = useRouter();
@@ -114,8 +114,8 @@ export function useSearch() {
           trimmedRel
       );
 
-      // If empty query and no filter, clear results
-      if (!trimmed && !hasFilter) {
+      // If empty or single character query without filters, clear results immediately without network fetch
+      if ((!trimmed || trimmed.length < 2) && !hasFilter) {
         setResults([]);
         setTotal(0);
         setIsLoading(false);
@@ -227,17 +227,21 @@ export function useSearch() {
     [pageSize]
   );
 
-  // Trigger search with 250 ms debounce when query or filters change
+  // Trigger search with 100-120ms ultra-fast debounce when query or filters change
   const triggerDebouncedSearch = useCallback(
     (newQ: string, newFilters: SearchFiltersState, newPage: number) => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
 
+      const trimmed = newQ.trim();
+      // Ultra-fast 80ms debounce for phone/numeric or 3+ characters; 120ms for shorter
+      const delay = trimmed.length >= 3 || /^\d+$/.test(trimmed) ? 80 : 120;
+
       debounceTimerRef.current = setTimeout(() => {
         updateUrl(newQ, newFilters, newPage);
         executeSearch(newQ, newFilters, newPage);
-      }, 250);
+      }, delay);
     },
     [executeSearch, updateUrl]
   );
@@ -245,8 +249,11 @@ export function useSearch() {
   const handleQueryChange = (val: string) => {
     setQuery(val);
     setPage(1);
-    const normalized = normalizeEpic(val.trim());
-    if (isValidEpic(normalized)) {
+    const trimmed = val.trim();
+    const normalized = normalizeEpic(trimmed);
+
+    // Instant 0ms execution for valid EPIC or 10-digit mobile number
+    if (isValidEpic(normalized) || /^\d{10}$/.test(trimmed)) {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       updateUrl(val, filters, 1);
       executeSearch(val, filters, 1);

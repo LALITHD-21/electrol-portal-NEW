@@ -2,6 +2,9 @@
   "name": "elector-lookup-portal-web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.x"
+  },
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 8081",
     "build": "next build",

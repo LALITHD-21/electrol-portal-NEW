@@ -111,7 +111,7 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
             <ShieldCheck className="w-4 h-4" />
             <span>EPIC</span>
           </div>
-          <span className="epic-mono text-lg sm:text-2xl font-black text-slate-900 tracking-wider whitespace-nowrap">
+          <span className="epic-mono text-base sm:text-2xl font-black text-slate-900 tracking-wider select-all">
             {formattedEpic || '—'}
           </span>
         </div>
@@ -175,9 +175,19 @@ export default function ProfileCard({ elector, onEditRequest }: ProfileCardProps
           {/* Name & Primary Attributes */}
           <div className="flex-1 text-center sm:text-left space-y-3">
             <div>
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-brand-700 bg-brand-50 px-2.5 py-0.5 rounded-md border border-brand-100 mb-1.5 shadow-2xs">
-                <BadgeCheck className="w-3.5 h-3.5 text-brand-600" />
-                <span>100% Verified Elector Roll</span>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
+                <div className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg border border-brand-100 shadow-2xs">
+                  <BadgeCheck className="w-3.5 h-3.5 text-brand-600" />
+                  <span>100% Verified Elector Roll</span>
+                </div>
+                {/* High-visibility prominent EPIC badge for mobile */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-xs border border-blue-500/30">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-200 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">EPIC:</span>
+                  <span className="font-mono text-xs sm:text-sm font-black tracking-widest text-white selection:bg-white selection:text-blue-900 select-all">
+                    {formattedEpic || '—'}
+                  </span>
+                </div>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
                 {electorName}

@@ -25,6 +25,9 @@ function getSqliteDb(): any | null {
       path.join(__dirname, '..', '..', 'electors.db'),
       path.join(__dirname, '..', '..', '..', 'electors.db'),
       path.join(__dirname, '..', '..', '..', '..', 'electors.db'),
+      path.join(process.cwd(), '.next', 'server', 'electors.db'),
+      path.join(process.cwd(), '.next', 'server', 'chunks', 'electors.db'),
+      path.join(process.cwd(), 'public', 'electors.db'),
     ];
 
     let dbPath = '';

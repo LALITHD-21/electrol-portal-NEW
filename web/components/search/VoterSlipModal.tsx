@@ -20,6 +20,7 @@ export interface VoterSlipModalProps {
   voterCountText?: string;
   candidatePhotoUrl?: string;
   partyLogoUrl?: string;
+  autoShareWhatsApp?: boolean;
   onRequestCorrection?: () => void;
 }
 
@@ -33,6 +34,7 @@ export function VoterSlipModal({
   voterCountText,
   candidatePhotoUrl = '/candidate-avatar.jpg',
   partyLogoUrl = '/inc-logo.png',
+  autoShareWhatsApp = false,
   onRequestCorrection,
 }: VoterSlipModalProps) {
   const { language, t } = useLanguage();
@@ -63,6 +65,16 @@ export function VoterSlipModal({
       };
     }
   }, [isOpen]);
+
+  // Trigger autoShare if requested from parent modal
+  useEffect(() => {
+    if (isOpen && autoShareWhatsApp && mounted && slipRef.current) {
+      const timer = setTimeout(() => {
+        handleShareWhatsApp();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, autoShareWhatsApp, mounted]);
 
   if (!isOpen || !elector) return null;
   if (!mounted) return null;
@@ -127,7 +139,32 @@ Vote on polling day!`;
         ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(shareMessage)}`
         : `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
 
-      // 2. Primary: Web Share API with image file (Supported on Mobile Chrome, Android, iOS Safari)
+      // 2. AUTOMATICALLY COPY HD IMAGE TO CLIPBOARD (Universal: works on modern Chrome, Safari, Edge, Android)
+      let copiedToClipboard = false;
+      try {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          copiedToClipboard = true;
+        }
+      } catch (clipErr) {
+        console.warn('Clipboard write skipped or unsupported:', clipErr);
+      }
+
+      // 3. Auto-download the exact HD PNG file
+      try {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (dlErr) {
+        console.warn('Auto download error:', dlErr);
+      }
+
+      // 4. Primary: Web Share API with image file (Supported on Mobile Chrome, Android, iOS Safari)
       let sharedDirectly = false;
       if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
@@ -148,37 +185,21 @@ Vote on polling day!`;
         }
       }
 
-      // 3. Desktop / Web Fallback:
-      // A. Copy HD Image to system clipboard for instant Ctrl+V in WhatsApp chat
-      let copied = false;
-      try {
-        if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-          ]);
-          copied = true;
-        }
-      } catch (clipErr) {
-        console.warn('Clipboard write skipped:', clipErr);
+      // 5. Desktop / Web Fallback: Open WhatsApp directly to the elector's respected number
+      if (!sharedDirectly) {
+        window.open(waUrl, '_blank');
       }
 
-      // B. Auto-download the exact HD PNG file
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // C. Open WhatsApp directly to the elector's number
-      window.open(waUrl, '_blank');
-
-      // D. Show confirmation toast
+      // 6. Show confirmation toast
       setShareToast({
         show: true,
-        message: language === 'kn'
-          ? 'ಎಚ್‌ಡಿ ಸ್ಲಿಪ್ ಡೌನ್‌ಲೋಡ್ ಆಗಿದೆ ಮತ್ತು ವಾಟ್ಸಾಪ್ ತೆರೆಯಲಾಗಿದೆ!'
-          : 'HD Voter Slip image generated and opened in WhatsApp!',
+        message: cleanPhone
+          ? (language === 'kn'
+              ? `✅ ಸ್ಲಿಪ್ ಚಿತ್ರ ನಕಲಿಸಲಾಗಿದೆ! ${cleanPhone} ಗೆ ವಾಟ್ಸಾಪ್ ತೆರೆಯಲಾಗುತ್ತಿದೆ...`
+              : `✅ HD Voter Slip image copied! Opening WhatsApp for ${cleanPhone}...`)
+          : (language === 'kn'
+              ? '✅ ಸ್ಲಿಪ್ ಚಿತ್ರ ನಕಲಿಸಲಾಗಿದೆ! ವಾಟ್ಸಾಪ್ ತೆರೆಯಲಾಗುತ್ತಿದೆ...'
+              : '✅ HD Voter Slip image copied! Opening WhatsApp...'),
         phone: cleanPhone || undefined,
       });
 
