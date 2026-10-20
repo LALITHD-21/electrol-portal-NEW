@@ -26,6 +26,7 @@ function SearchPageContent() {
     isLoading,
     error,
     handleQueryChange,
+    handleSubmitSearch,
     handleFilterChange,
     handleRelativeNameChange,
     handleToggleFuzzy,
@@ -176,6 +177,8 @@ function SearchPageContent() {
           partyLogoUrl="/inc-logo.png"
           searchQuery={query}
           onSearchChange={handleQueryChange}
+          onSubmitSearch={handleSubmitSearch}
+          totalResults={total}
           relativeNameFilter={filters.relativeName || ''}
           onRelativeNameChange={handleRelativeNameChange}
           isLoading={isLoading}

@@ -115,6 +115,18 @@ export function SearchResults({
 
   // 4. Empty State (Searched but 0 results)
   if (results.length === 0) {
+    if (searchQuery.trim().length === 1) {
+      return (
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-blue-200 p-6 text-center space-y-2 shadow-2xs max-w-md mx-auto animate-fadeIn">
+          <p className="text-xs text-blue-800 font-bold">
+            {language === 'kn'
+              ? 'ಮತದಾರರ ಹೆಸರು ಹುಡುಕಲು ಕನಿಷ್ಠ 2 ಅಕ್ಷರಗಳನ್ನು ನಮೂದಿಸಿ (ಉದಾ: ರಮೇಶ್, ಸುರೇಶ್...)'
+              : 'Please type at least 2 characters to search by name (e.g., Ramesh, Suresh...)'}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center space-y-4 shadow-soft-sm max-w-md mx-auto animate-fadeIn">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-100 text-slate-400">

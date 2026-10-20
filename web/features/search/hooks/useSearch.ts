@@ -255,6 +255,16 @@ export function useSearch() {
     triggerDebouncedSearch(val, filters, 1);
   };
 
+  const handleSubmitSearch = (overrideQuery?: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    const qToUse = overrideQuery !== undefined ? overrideQuery : query;
+    setPage(1);
+    updateUrl(qToUse, filters, 1);
+    executeSearch(qToUse, filters, 1);
+  };
+
   const handleFilterChange = (key: keyof SearchFiltersState, value: string | boolean) => {
     const updated = { ...filters, [key]: value };
     setFilters(updated);
@@ -397,6 +407,7 @@ export function useSearch() {
     error,
     totalPages: Math.ceil(total / pageSize),
     handleQueryChange,
+    handleSubmitSearch,
     handleFilterChange,
     handleRelativeNameChange,
     handleToggleFuzzy,

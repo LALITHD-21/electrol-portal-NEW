@@ -26,6 +26,8 @@ export interface CandidateHeroBannerProps {
   // Search integration
   searchQuery?: string;
   onSearchChange?: (val: string) => void;
+  onSubmitSearch?: () => void;
+  totalResults?: number;
   selectedPlace?: string;
   onSelectPlace?: (place: string) => void;
   relativeNameFilter?: string;
@@ -44,6 +46,8 @@ export function CandidateHeroBanner({
   partyLogoUrl = '/inc-logo.png',
   searchQuery = '',
   onSearchChange,
+  onSubmitSearch,
+  totalResults,
   selectedPlace = 'All places',
   onSelectPlace,
   relativeNameFilter = '',
@@ -136,18 +140,21 @@ export function CandidateHeroBanner({
 
         <div className="relative flex items-center justify-between gap-3.5 sm:gap-6">
           {/* Candidate Portrait Avatar Frame */}
-          <div className="relative w-24 h-24 sm:w-36 sm:h-36 min-w-[96px] min-h-[96px] sm:min-w-[144px] sm:min-h-[144px] shrink-0">
-            <div className="relative w-full h-full rounded-2xl sm:rounded-3xl border-2 border-white/95 shadow-xl shadow-blue-950/25 overflow-hidden bg-slate-900/10 group">
-              <Image
-                src={candidatePhotoUrl}
-                alt={displayName}
-                fill
-                priority
-                unoptimized
-                className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
-                sizes="(max-width: 640px) 96px, 144px"
-              />
-            </div>
+          <div className={cn(
+            "relative rounded-2xl sm:rounded-3xl border-2 border-white/95 shadow-xl shadow-blue-950/25 overflow-hidden bg-slate-900/10 group shrink-0 transition-all duration-300",
+            searchQuery.trim()
+              ? "w-14 h-14 min-w-[56px] min-h-[56px] sm:w-36 sm:h-36 sm:min-w-[144px] sm:min-h-[144px]"
+              : "w-24 h-24 min-w-[96px] min-h-[96px] sm:w-36 sm:h-36 sm:min-w-[144px] sm:min-h-[144px]"
+          )}>
+            <Image
+              src={candidatePhotoUrl}
+              alt={displayName}
+              fill
+              priority
+              unoptimized
+              className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 640px) 96px, 144px"
+            />
           </div>
 
           {/* Candidate Text Metadata */}
@@ -155,7 +162,10 @@ export function CandidateHeroBanner({
             <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-200 leading-tight truncate">
               {displayConstituency}
             </div>
-            <h2 className="text-base sm:text-2xl md:text-3xl font-black tracking-tight text-white leading-snug truncate">
+            <h2 className={cn(
+              "font-black tracking-tight text-white leading-snug truncate transition-all",
+              searchQuery.trim() ? "text-sm sm:text-2xl md:text-3xl" : "text-base sm:text-2xl md:text-3xl"
+            )}>
               {displayName}
             </h2>
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
@@ -198,6 +208,13 @@ export function CandidateHeroBanner({
             if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
               document.activeElement.blur();
             }
+            onSubmitSearch?.();
+            if (typeof window !== 'undefined') {
+              const el = document.getElementById('search-results-section');
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }
           }}
           className="relative flex items-center bg-slate-50/90 rounded-2xl border border-slate-200 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100/70 focus-within:bg-white transition-all shadow-inner"
         >
@@ -236,6 +253,38 @@ export function CandidateHeroBanner({
             {language === 'kn' ? 'ಹುಡುಕಿ' : 'Search'}
           </button>
         </form>
+
+        {/* Live Search Status Pill on Mobile */}
+        {searchQuery.trim().length > 0 && (
+          <div className="pt-0.5 animate-fadeIn">
+            {isLoading ? (
+              <div className="flex items-center gap-1.5 text-blue-700 font-bold text-xs py-1 px-1">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                <span>{language === 'kn' ? 'ಮತದಾರರ ಪಟ್ಟಿಯಲ್ಲಿ ಹುಡುಕಲಾಗುತ್ತಿದೆ...' : 'Searching voter list...'}</span>
+              </div>
+            ) : totalResults !== undefined && totalResults > 0 ? (
+              <div className="flex items-center justify-between bg-blue-50/95 border border-blue-200/90 px-3.5 py-2 rounded-2xl text-xs font-bold text-blue-950 shadow-2xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>
+                    {totalResults.toLocaleString()} {language === 'kn' ? 'ಮತದಾರರು ಕಂಡುಬಂದಿದ್ದಾರೆ' : 'voters found'}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('search-results-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="text-blue-700 hover:text-blue-900 font-black inline-flex items-center gap-1 focus:outline-none active:scale-95 transition"
+                >
+                  <span>{language === 'kn' ? 'ಫಲಿತಾಂಶ ನೋಡಿ' : 'View Results'}</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {/* Accordion: + Add father / husband name */}
         <div className="pt-0.5">
