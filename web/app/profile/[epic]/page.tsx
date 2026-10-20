@@ -8,6 +8,7 @@ import DashboardLayout from '../../dashboard/layout';
 import { createAdminClient } from '@/lib/supabase/server';
 import { Elector } from '@/lib/types';
 import { resolveElectorLocation, resolveElectorSerialNumber } from '@/lib/boothMaster';
+import { getElectorByEpicLocal } from '@/lib/sqliteElectors';
 
 interface ProfilePageProps {
   params: {
@@ -69,31 +70,43 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     );
   }
 
-  // 2. Query Supabase electors database table
+  // 2. Query Local SQLite database first (< 1ms instant response)
   let elector: Elector | null = null;
   try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('electors')
-      .select('*')
-      .eq('epic_number', epic)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Supabase query error:', error);
-    } else if (data) {
-      const location = resolveElectorLocation(data);
-      const serial = resolveElectorSerialNumber(data);
-      elector = {
-        ...(data as Elector),
-        serial_number: serial,
-        taluk: location.taluk,
-        district: location.district,
-        ac_name: location.ac_name,
-      };
+    const localElector = getElectorByEpicLocal(epic);
+    if (localElector) {
+      elector = localElector;
     }
-  } catch (error) {
-    console.error('Failed to fetch elector profile from database:', error);
+  } catch (sqliteErr) {
+    console.warn('Local elector lookup skipped, checking remote DB:', sqliteErr);
+  }
+
+  // Fallback to Supabase electors database table if not found locally
+  if (!elector) {
+    try {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from('electors')
+        .select('*')
+        .eq('epic_number', epic)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Supabase query error:', error);
+      } else if (data) {
+        const location = resolveElectorLocation(data);
+        const serial = resolveElectorSerialNumber(data);
+        elector = {
+          ...(data as Elector),
+          serial_number: serial,
+          taluk: location.taluk,
+          district: location.district,
+          ac_name: location.ac_name,
+        };
+      }
+    } catch (error) {
+      console.error('Failed to fetch elector profile from database:', error);
+    }
   }
 
   // 3. Handle Not Found (Empty State)

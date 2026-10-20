@@ -56,6 +56,13 @@ function getSqliteDb(): any | null {
   }
 }
 
+function buildFtsQuery(q: string): string | null {
+  const clean = q.replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
+  const words = clean.split(/\s+/).filter(w => w.length >= 2);
+  if (words.length === 0) return null;
+  return words.map(w => `"${w}"*`).join(' ');
+}
+
 export function isLocalDbReady(): boolean {
   return Boolean(getSqliteDb());
 }
