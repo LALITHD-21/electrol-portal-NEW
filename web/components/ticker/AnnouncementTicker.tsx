@@ -19,31 +19,42 @@ export interface TickerItemConfig {
 
 export const TICKER_ITEMS: TickerItemConfig[] = [
   {
-    id: 'item-1',
-    text: 'ಮತದಾನ ದಿನಾಂಕ: 23 ಅಕ್ಟೋಬರ್ 2026 (ಶುಕ್ರವಾರ) | ಸಮಯ: ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
+    id: 'item-kn-constituency',
+    text: 'ಕರ್ನಾಟಕ ಆಗ್ನೇಯ ಪದವೀಧರರ ಕ್ಷೇತ್ರ | ವಿಧಾನ ಪರಿಷತ್ ಚುನಾವಣೆ 2026',
     isHeadline: true, // Golden accent highlight
   },
   {
-    id: 'item-2',
+    id: 'item-kn-polling',
+    text: 'ಮತದಾನ ದಿನಾಂಕ: 23 ಅಕ್ಟೋಬರ್ 2026 (ಶುಕ್ರವಾರ) | ಸಮಯ: ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
+    isHeadline: false,
+  },
+  {
+    id: 'item-en-constituency',
+    text: "Karnataka South-East Graduates' Constituency — MLC Election 2026",
+    isHeadline: true,
+  },
+  {
+    id: 'item-en-polling',
     text: 'Polling Day: Friday, 23 October 2026 | Time: 8:00 AM – 4:00 PM',
     isHeadline: false,
   },
 ];
 
 /**
- * Premium SVG Ballot Box / Star Separator
- * Guarantees identical baseline alignment with English and Kannada typography.
+ * Professional Crisp Sparkle / Star Separator
+ * High-definition geometric diamond-star that renders crisply on retina displays
+ * with identical baseline alignment across Kannada and English typography.
  */
-function BallotSeparator() {
+function ProfessionalSeparator() {
   return (
     <span className="tkr-separator" aria-hidden="true">
       <svg
-        className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white"
+        className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300"
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path d="M12 2L14.4 8.6L21.5 9.3L16.1 14.1L17.7 21.1L12 17.5L6.3 21.1L7.9 14.1L2.5 9.3L9.6 8.6L12 2Z" />
+        <path d="M12 1C12 7.075 16.925 12 23 12C16.925 12 12 16.925 12 23C12 16.925 7.075 12 1 12C7.075 12 12 7.075 12 1Z" />
       </svg>
     </span>
   );
@@ -52,10 +63,10 @@ function BallotSeparator() {
 export default function AnnouncementTicker() {
   const [isVisible, setIsVisible] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
-  const [durationSec, setDurationSec] = useState(65);
+  const [durationSec, setDurationSec] = useState(75);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Calculate gentle, easily readable speed (~38px/s) based on content width
+  // Calculate gentle, comfortably readable speed (~38px/s) based on content width
   useEffect(() => {
     const computeSpeed = () => {
       if (trackRef.current) {
@@ -63,7 +74,7 @@ export default function AnnouncementTicker() {
         const singleSetWidth = trackRef.current.scrollWidth / 2;
         if (singleSetWidth > 0) {
           const targetPxPerSec = 38; // Gentle, comfortably readable scrolling speed
-          const calculatedSec = Math.max(45, Math.round(singleSetWidth / targetPxPerSec));
+          const calculatedSec = Math.max(50, Math.round(singleSetWidth / targetPxPerSec));
           setDurationSec(calculatedSec);
         }
       }
@@ -94,7 +105,7 @@ export default function AnnouncementTicker() {
   const screenReaderSummary = TICKER_ITEMS.map((item) => item.text).join(' • ');
 
   // Repeat items to ensure seamless loop width across all screen resolutions
-  const loopSet = [...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS];
+  const loopSet = [...TICKER_ITEMS, ...TICKER_ITEMS];
 
   return (
     <aside
@@ -130,7 +141,7 @@ export default function AnnouncementTicker() {
               >
                 {item.text}
               </span>
-              <BallotSeparator />
+              <ProfessionalSeparator />
             </React.Fragment>
           ))}
 
@@ -144,7 +155,7 @@ export default function AnnouncementTicker() {
               >
                 {item.text}
               </span>
-              <BallotSeparator />
+              <ProfessionalSeparator />
             </React.Fragment>
           ))}
         </div>

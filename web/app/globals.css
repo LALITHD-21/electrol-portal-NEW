@@ -713,10 +713,11 @@ button:focus-visible,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 0 clamp(20px, 3.5vw, 40px);
-  color: #ffffff;
+  margin: 0 clamp(22px, 3.8vw, 44px);
+  color: var(--tkr-accent);
   opacity: 0.95;
   flex-shrink: 0;
+  filter: drop-shadow(0 0 5px rgba(255, 213, 74, 0.55));
 }
 
 .tkr-close-btn {
