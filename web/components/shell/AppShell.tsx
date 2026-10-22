@@ -181,21 +181,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </nav>
 
               <LiveRecordBadge />
-              
-              {/* Quick Alert Bell */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('open-push-prompt'));
-                  }
-                }}
-                title="Polling Alerts & Push Notification Status"
-                className="p-1.5 text-slate-600 hover:text-brand-600 active:bg-slate-100 rounded-xl border border-slate-200/80 min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors flex-shrink-0"
-                aria-label="Alerts"
-              >
-                <Bell className="w-4 h-4 text-amber-600 animate-pulse" />
-              </button>
 
               {/* Desktop Sign Out */}
               <div className="hidden sm:block">

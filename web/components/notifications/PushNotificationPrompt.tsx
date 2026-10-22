@@ -80,6 +80,11 @@ export default function PushNotificationPrompt() {
   // Trigger test notification locally on the device to verify instant display
   const fireTestNotification = useCallback(async () => {
     try {
+      try {
+        const audio = new Audio('/notification-sound.mp3');
+        audio.play().catch(() => {});
+      } catch {}
+
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.ready;
         await reg.showNotification(
@@ -91,8 +96,10 @@ export default function PushNotificationPrompt() {
                 : 'Polling Day: Friday, 23 Oct 2026 (8:00 AM – 4:00 PM). Live alerts are active on this device.',
             icon: '/app-logo.png',
             badge: '/icon-192.png',
-            tag: 'test-notification',
-            vibrate: [200, 100, 200],
+            tag: `test-notification-${Date.now()}`,
+            vibrate: [300, 100, 300, 100, 450],
+            silent: false,
+            sound: '/notification-sound.mp3',
             data: { url: '/search' },
           } as any
         );
@@ -200,8 +207,34 @@ export default function PushNotificationPrompt() {
       setShowPrompt(true);
     };
 
+    // Listen for broadcast push messages forwarded by service worker
+    const handleSwMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PUSH_NOTIFICATION_RECEIVED') {
+        try {
+          const audio = new Audio('/notification-sound.mp3');
+          audio.volume = 0.95;
+          audio.play().catch(() => {});
+        } catch {}
+
+        setFeedback({
+          type: 'success',
+          message: `${event.data.title}: ${event.data.body}`,
+        });
+        setTimeout(() => setFeedback(null), 7000);
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleSwMessage);
+    }
+
     window.addEventListener('open-push-prompt', handleOpenPrompt);
-    return () => window.removeEventListener('open-push-prompt', handleOpenPrompt);
+    return () => {
+      window.removeEventListener('open-push-prompt', handleOpenPrompt);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+      }
+    };
   }, [fireTestNotification, language, performSubscription]);
 
   const handleAllow = async () => {
@@ -449,45 +482,6 @@ export default function PushNotificationPrompt() {
             </div>
           </div>
         </aside>
-      )}
-
-      {/* 4. Persistent Mobile Floating Bell Button (Discreet, easily tappable at any time) */}
-      {!showPrompt && (
-        <div className="fixed bottom-4 left-3 z-30 sm:hidden">
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('open-push-prompt'));
-              }
-            }}
-            disabled={loading}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-lg border backdrop-blur-md transition-all active:scale-95 ${
-              isSubscribed || permission === 'granted'
-                ? 'bg-emerald-50/95 border-emerald-300 text-emerald-800'
-                : 'bg-white/95 border-blue-300 text-blue-800'
-            }`}
-          >
-            <span className="relative flex h-2 w-2">
-              <span
-                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  isSubscribed || permission === 'granted' ? 'bg-emerald-400' : 'bg-blue-400'
-                }`}
-              />
-              <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isSubscribed || permission === 'granted' ? 'bg-emerald-500' : 'bg-blue-500'
-                }`}
-              />
-            </span>
-            <Bell className="w-3.5 h-3.5" />
-            <span>
-              {isSubscribed || permission === 'granted'
-                ? (language === 'kn' ? 'ಜ್ಞಾಪನೆ ಸಕ್ರಿಯ' : 'Alerts Active')
-                : (language === 'kn' ? 'ಜ್ಞಾಪನೆ ಪಡೆಯಿರಿ' : 'Get Alerts')}
-            </span>
-          </button>
-        </div>
       )}
 
       {/* 5. Desktop Unsubscribe option pill for subscribed users */}

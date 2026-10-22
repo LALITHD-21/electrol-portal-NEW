@@ -47,8 +47,9 @@ self.addEventListener('push', (event) => {
     title: 'Polling Day — 23 Oct 2026',
     body: 'Voting 8:00 AM – 4:00 PM. ಮತದಾನ ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
     url: '/search',
-    icon: '/icon-192.png',
+    icon: '/app-logo.png',
     badge: '/icon-192.png',
+    tag: `broadcast-${Date.now()}`,
   };
 
   if (event.data) {
@@ -61,6 +62,21 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // 1. Post to all active open tabs so the page can immediately play the pleasant chime sound
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        client.postMessage({
+          type: 'PUSH_NOTIFICATION_RECEIVED',
+          title: data.title,
+          body: data.body,
+          url: data.url || '/search',
+        });
+      }
+    })
+  );
+
+  // 2. Display System Notification with fresh tag, vibration pattern, and sound
   const options = {
     body: data.body,
     icon: data.icon || '/app-logo.png',
@@ -69,16 +85,11 @@ self.addEventListener('push', (event) => {
       url: data.url || '/search',
       timestamp: Date.now(),
     },
-    tag: data.tag || 'polling-day-reminder',
+    tag: data.tag || `poll-alert-${Date.now()}`,
     renotify: true,
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [
-      {
-        action: 'open',
-        title: 'ಮತದಾರರ ಪಟ್ಟಿ ವೀಕ್ಷಿಸಿ / Open',
-      },
-    ],
+    silent: false,
+    vibrate: [300, 100, 300, 100, 450],
+    sound: '/notification-sound.mp3',
   };
 
   event.waitUntil(
@@ -91,6 +102,7 @@ self.addEventListener('push', (event) => {
         data: {
           url: data.url || '/search',
         },
+        silent: false,
       });
     })
   );

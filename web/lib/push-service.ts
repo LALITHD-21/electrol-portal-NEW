@@ -284,9 +284,10 @@ export async function broadcastPushNotification(payload: SendPushPayload): Promi
       title: payload.title,
       body: payload.body,
       url: payload.url || '/search',
-      tag: payload.tag || 'polling-day-reminder',
-      icon: payload.icon || '/icon-192.png',
+      tag: `${payload.tag || 'broadcast'}-${Date.now()}`,
+      icon: payload.icon || '/app-logo.png',
       badge: payload.badge || '/icon-192.png',
+      sound: '/notification-sound.mp3',
     });
 
     try {
