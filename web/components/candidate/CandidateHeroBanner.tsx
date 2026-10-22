@@ -21,6 +21,7 @@ export interface CandidateHeroBannerProps {
   candidateRole?: string;
   constituencyTitle?: string;
   voterCountText?: string;
+  voterCount?: number;
   candidatePhotoUrl?: string;
   partyLogoUrl?: string;
   // Search integration
@@ -42,6 +43,7 @@ export function CandidateHeroBanner({
   candidateRole,
   constituencyTitle,
   voterCountText,
+  voterCount,
   candidatePhotoUrl = '/candidate-avatar.jpg',
   partyLogoUrl = '/inc-logo.png',
   searchQuery = '',
@@ -56,6 +58,54 @@ export function CandidateHeroBanner({
   showBallotGuide = true,
 }: CandidateHeroBannerProps) {
   const [showRelativeInput, setShowRelativeInput] = useState(Boolean(relativeNameFilter));
+  const [liveVoterCount, setLiveVoterCount] = useState<number>(voterCount ?? 183778);
+
+  useEffect(() => {
+    if (typeof voterCount === 'number' && voterCount > 0) {
+      setLiveVoterCount(voterCount);
+    }
+  }, [voterCount]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchLiveCount = async () => {
+      try {
+        const res = await fetch('/api/stats', { cache: 'no-store' });
+        if (res.ok && active) {
+          const data = await res.json();
+          if (typeof data.count === 'number' && data.count > 0) {
+            setLiveVoterCount(data.count);
+          }
+        }
+      } catch {
+        // silent fallback
+      }
+    };
+
+    fetchLiveCount();
+
+    const handleElectorUpdate = (e: Event) => {
+      const custom = e as CustomEvent<{ version?: string; total?: number }>;
+      if (custom.detail?.total && typeof custom.detail.total === 'number') {
+        setLiveVoterCount(custom.detail.total);
+      } else {
+        fetchLiveCount();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', fetchLiveCount);
+      window.addEventListener('electors-updated', handleElectorUpdate);
+    }
+
+    return () => {
+      active = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', fetchLiveCount);
+        window.removeEventListener('electors-updated', handleElectorUpdate);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (relativeNameFilter && !showRelativeInput) {
@@ -72,8 +122,17 @@ export function CandidateHeroBanner({
     language === 'kn'
       ? t.constituencyTitle
       : (constituencyTitle || t.constituencyTitle);
+
+  const formattedCount = liveVoterCount.toLocaleString('en-IN');
+  const dynamicVoterCountText =
+    language === 'kn'
+      ? `${formattedCount} ನೋಂದಾಯಿತ ಪದವೀಧರ ಮತದಾರರು`
+      : `${formattedCount} graduate voters listed`;
+
   const displayVoterCount =
-    language === 'kn' ? t.voterCountText : (voterCountText || t.voterCountText);
+    voterCountText && !voterCountText.includes('1,92,696')
+      ? voterCountText
+      : dynamicVoterCountText;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4 font-sans">
