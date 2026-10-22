@@ -20,26 +20,11 @@ export interface TickerItemConfig {
 export const TICKER_ITEMS: TickerItemConfig[] = [
   {
     id: 'item-1',
-    text: 'ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್ ಅವರಿಗೆ ಮತ ನೀಡಿ',
-    isHeadline: true, // Accent highlight
+    text: 'ಮತದಾನ ದಿನಾಂಕ: 23 ಅಕ್ಟೋಬರ್ 2026 (ಶುಕ್ರವಾರ) | ಸಮಯ: ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
+    isHeadline: true, // Golden accent highlight
   },
   {
     id: 'item-2',
-    text: 'In the name of Shashi Hulikuntemutt',
-    isHeadline: false,
-  },
-  {
-    id: 'item-3',
-    text: 'ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್ ಅವರ ಹೆಸರಿನಲ್ಲಿ',
-    isHeadline: false,
-  },
-  {
-    id: 'item-4',
-    text: 'ಮತದಾನ ದಿನಾಂಕ: 23 ಅಕ್ಟೋಬರ್ 2026 (ಶುಕ್ರವಾರ) | ಸಮಯ: ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
-    isHeadline: false,
-  },
-  {
-    id: 'item-5',
     text: 'Polling Day: Friday, 23 October 2026 | Time: 8:00 AM – 4:00 PM',
     isHeadline: false,
   },
@@ -133,6 +118,9 @@ export default function AnnouncementTicker() {
   // Static accessible summary for screen readers
   const screenReaderSummary = TICKER_ITEMS.map((item) => item.text).join(' • ');
 
+  // Repeat items to ensure seamless loop width across all screen resolutions
+  const loopSet = [...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS];
+
   return (
     <aside
       className="tkr-bar"
@@ -151,22 +139,14 @@ export default function AnnouncementTicker() {
         <p>{screenReaderSummary}</p>
       </div>
 
-      {/* 2. Fixed Left Badge (Pulsing Dot + ANNOUNCEMENT) */}
-      <div className="tkr-badge-container">
-        <span className="tkr-badge">
-          <span className="tkr-pulsing-dot" aria-hidden="true" />
-          <span>ANNOUNCEMENT</span>
-        </span>
-      </div>
-
-      {/* 3. Scrolling Track Viewport with Edge Fade Masks */}
+      {/* Scrolling Track Viewport with Edge Fade Masks */}
       <div className="tkr-viewport" aria-hidden="true">
         <div
           ref={trackRef}
           className={`tkr-track ${isPaused ? 'tkr-track-paused' : ''}`}
         >
           {/* Primary Track Set */}
-          {TICKER_ITEMS.map((item, index) => (
+          {loopSet.map((item, index) => (
             <React.Fragment key={`orig-${item.id}-${index}`}>
               <span
                 className={`tkr-item ${
@@ -180,7 +160,7 @@ export default function AnnouncementTicker() {
           ))}
 
           {/* Seamless Duplicate Set (enables translate -50% infinite loop) */}
-          {TICKER_ITEMS.map((item, index) => (
+          {loopSet.map((item, index) => (
             <React.Fragment key={`dup-${item.id}-${index}`}>
               <span
                 className={`tkr-item ${
