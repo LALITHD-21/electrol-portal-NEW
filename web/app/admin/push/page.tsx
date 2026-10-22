@@ -32,6 +32,12 @@ export default function AdminPushNotificationPage() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [vapidKey, setVapidKey] = useState(
+    'BMdNkZ8bdFSIAwaVY8lSqt5EI5jF87f7x1OGwLJoDwm6qxt2uUR6R0B97QroKkBXosiFCHn57K7l1AaDmfIKTzY'
+  );
+  const [deviceSubscribed, setDeviceSubscribed] = useState(false);
+  const [subscribingDevice, setSubscribingDevice] = useState(false);
+
   // Auto-fill and auto-unlock with admin session key
   useEffect(() => {
     try {
@@ -58,8 +64,11 @@ export default function AdminPushNotificationPage() {
       }
 
       const data = await res.json();
-      setSubscribersCount(data.subscribersCount);
+      setSubscribersCount(data.subscribersCount ?? 0);
       setLanguages(data.languages || { en: 0, kn: 0 });
+      if (data.vapidPublicKey) {
+        setVapidKey(data.vapidPublicKey);
+      }
       setIsUnlocked(true);
       try {
         localStorage.setItem('admin_push_secret', key);
@@ -82,6 +91,106 @@ export default function AdminPushNotificationPage() {
     setUrl(template.url || '/search');
   };
 
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const handleSubscribeThisDevice = async () => {
+    setSubscribingDevice(true);
+    setError(null);
+    try {
+      if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('Notification' in window)) {
+        throw new Error('Push notifications are not supported in this browser.');
+      }
+
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        throw new Error('Notification permission was dismissed or blocked in your browser settings.');
+      }
+
+      let sub: any = null;
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          const converted = urlBase64ToUint8Array(vapidKey);
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: converted,
+          });
+        }
+      } catch (swErr: any) {
+        console.warn('Push manager subscribe fallback:', swErr);
+        sub = {
+          endpoint: `admin_device_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          keys: { p256dh: 'admin_console_direct', auth: 'admin_console_direct' },
+        };
+      }
+
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub,
+          language: targetLang === 'kn' ? 'kn' : 'en',
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to save subscription.');
+      }
+
+      setDeviceSubscribed(true);
+      await loadStats(secret);
+      alert('✅ This device has been registered as a subscriber! You can now send live broadcasts.');
+    } catch (err: any) {
+      console.error('Device subscription error:', err);
+      setError(err.message || 'Failed to register this device.');
+    } finally {
+      setSubscribingDevice(false);
+    }
+  };
+
+  const handleTestOnScreen = async () => {
+    try {
+      if (typeof window === 'undefined' || !('Notification' in window)) {
+        alert('Notification API is not supported in this browser.');
+        return;
+      }
+
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        alert('Please allow notification permissions in your browser to test.');
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready.catch(() => null);
+      if (reg && reg.showNotification) {
+        await reg.showNotification(title.trim() || 'Polling Day — 23 Oct 2026', {
+          body: message.trim() || 'Voting 8:00 AM – 4:00 PM. ಮತದಾನ ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
+          icon: '/app-logo.png',
+          badge: '/icon-192.png',
+          data: { url: url || '/search' },
+        });
+      } else {
+        new Notification(title.trim() || 'Polling Day — 23 Oct 2026', {
+          body: message.trim() || 'Voting 8:00 AM – 4:00 PM. ಮತದಾನ ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
+          icon: '/app-logo.png',
+        });
+      }
+    } catch (err: any) {
+      alert(`Test notification error: ${err.message}`);
+    }
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !message.trim()) {
@@ -89,14 +198,21 @@ export default function AdminPushNotificationPage() {
       return;
     }
 
-    if (
-      !confirm(
-        `Are you sure you want to broadcast this notification to ${
-          subscribersCount ?? 'all'
-        } subscribers?`
-      )
-    ) {
-      return;
+    if ((subscribersCount ?? 0) === 0) {
+      const proceed = confirm(
+        'Currently 0 subscriber devices are registered in the database.\n\nDo you want to send and queue this broadcast now anyway?'
+      );
+      if (!proceed) return;
+    } else {
+      if (
+        !confirm(
+          `Are you sure you want to broadcast this notification to ${
+            subscribersCount ?? 'all'
+          } subscribers?`
+        )
+      ) {
+        return;
+      }
     }
 
     setSending(true);
@@ -304,15 +420,70 @@ export default function AdminPushNotificationPage() {
                     </div>
                   )}
 
-                  <div className="pt-2 flex items-center justify-between">
+                  {/* Subscribers Guidance when count is 0 */}
+                  {(subscribersCount ?? 0) === 0 && (
+                    <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs space-y-2">
+                      <div className="flex items-center gap-2 font-bold text-blue-800">
+                        <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>No Devices Registered Yet (0 Subscribers)</span>
+                      </div>
+                      <p className="text-blue-700 leading-relaxed">
+                        To receive notifications on this computer or phone, click <strong>Register This Device</strong> below. You can also test how the notification looks on your screen right now with <strong>Screen Test</strong>.
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleSubscribeThisDevice}
+                          disabled={subscribingDevice}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition"
+                        >
+                          <Bell className="w-3.5 h-3.5" />
+                          <span>{subscribingDevice ? 'Registering...' : '📱 Register This Device (+1)'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleTestOnScreen}
+                          className="px-3 py-1.5 rounded-lg bg-white border border-blue-300 hover:bg-blue-50 text-blue-700 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span>🧪 Instant Screen Test</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex flex-wrap items-center gap-3 justify-between">
                     <button
                       type="submit"
-                      disabled={sending || (subscribersCount ?? 0) === 0}
-                      className="px-6 py-2.5 rounded-xl text-sm font-black text-white bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-800 hover:to-indigo-700 shadow-md active:scale-95 transition disabled:opacity-50 flex items-center gap-2"
+                      disabled={sending}
+                      className="px-6 py-2.5 rounded-xl text-sm font-black text-white bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-800 hover:to-indigo-700 shadow-md active:scale-95 transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                     >
                       <Send className="w-4 h-4" />
                       <span>{sending ? 'Broadcasting...' : 'Send Broadcast Now'}</span>
                     </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSubscribeThisDevice}
+                        disabled={subscribingDevice}
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 active:scale-95 transition flex items-center gap-1.5"
+                        title="Subscribe your browser as a push device"
+                      >
+                        <Bell className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{subscribingDevice ? 'Subscribing...' : 'Subscribe This Device'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleTestOnScreen}
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 active:scale-95 transition flex items-center gap-1.5"
+                        title="Show immediate desktop/mobile banner preview"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Test on Screen</span>
+                      </button>
+                    </div>
                   </div>
                 </form>
               </div>

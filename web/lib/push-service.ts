@@ -54,7 +54,39 @@ export async function getAllSubscriptions(): Promise<PushSubscriptionRecord[]> {
     console.warn('Failed reading push_subscriptions.json:', e);
   }
 
-  // 2. Load from Supabase push_subscriptions table if present
+  // 2. Load from Supabase dashboard_snapshot (persistent JSONB store)
+  try {
+    const supabase = createAdminClient();
+    if (supabase) {
+      const { data: snapshot } = await supabase
+        .from('dashboard_snapshot')
+        .select('payload')
+        .eq('id', 1)
+        .maybeSingle();
+
+      const cloudSubs = snapshot?.payload?.push_subscriptions;
+      if (Array.isArray(cloudSubs)) {
+        cloudSubs.forEach((sub: any) => {
+          if (sub?.endpoint && sub?.keys?.p256dh && sub?.keys?.auth) {
+            subscriptionsMap.set(sub.endpoint, {
+              id: sub.id || `sub_${Date.now()}`,
+              endpoint: sub.endpoint,
+              keys: typeof sub.keys === 'string' ? JSON.parse(sub.keys) : sub.keys,
+              language: sub.language || 'en',
+              userAgent: sub.userAgent || sub.user_agent || 'Web Client',
+              subscribedAt: sub.subscribedAt || sub.subscribed_at || new Date().toISOString(),
+              dailyNotificationCount: sub.dailyNotificationCount || 0,
+              lastNotificationDate: sub.lastNotificationDate || sub.last_notification_date,
+            });
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Failed fetching push_subscriptions from Supabase snapshot:', err);
+  }
+
+  // 3. Load from Supabase push_subscriptions table if present
   try {
     const supabase = createAdminClient();
     if (supabase) {
@@ -95,6 +127,31 @@ async function saveSubscriptions(subscriptions: PushSubscriptionRecord[]) {
   } catch (e) {
     console.warn('Failed writing to push_subscriptions.json:', e);
   }
+
+  // Persist directly to Supabase dashboard_snapshot
+  try {
+    const supabase = createAdminClient();
+    if (supabase) {
+      const { data: snapshot } = await supabase
+        .from('dashboard_snapshot')
+        .select('payload')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (snapshot) {
+        const updatedPayload = {
+          ...snapshot.payload,
+          push_subscriptions: subscriptions,
+        };
+        await supabase
+          .from('dashboard_snapshot')
+          .update({ payload: updatedPayload, refreshed_at: new Date().toISOString() })
+          .eq('id', 1);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed syncing push_subscriptions to Supabase snapshot:', e);
+  }
 }
 
 /**
@@ -130,7 +187,7 @@ export async function saveSubscription(
 
   await saveSubscriptions(current);
 
-  // Sync to Supabase
+  // Also sync to Supabase table if available
   try {
     const supabase = createAdminClient();
     if (supabase) {

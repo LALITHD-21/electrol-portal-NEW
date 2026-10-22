@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
       kn: knCount,
     },
     scheduledReminders: SCHEDULED_REMINDERS,
-    vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+    vapidPublicKey:
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+      'BMdNkZ8bdFSIAwaVY8lSqt5EI5jF87f7x1OGwLJoDwm6qxt2uUR6R0B97QroKkBXosiFCHn57K7l1AaDmfIKTzY',
   });
 }
 
