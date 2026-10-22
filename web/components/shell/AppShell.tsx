@@ -17,6 +17,8 @@ import {
   User,
   Info,
   ClipboardList,
+  Bell,
+  Gift,
 } from 'lucide-react';
 import LogoutButton from '@/components/LogoutButton';
 import LiveRecordBadge from '@/components/LiveRecordBadge';
@@ -48,6 +50,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       href: '/admin/requests',
       icon: ClipboardList,
       isActive: pathname.startsWith('/admin/requests'),
+    },
+    {
+      label: 'Broadcast',
+      href: '/admin/push',
+      icon: Bell,
+      isActive: pathname.startsWith('/admin/push'),
+    },
+    {
+      label: 'Gift Tracker',
+      href: '/admin/gifts',
+      icon: Gift,
+      isActive: pathname.startsWith('/admin/gifts'),
     },
   ];
 
@@ -313,6 +327,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full">
                 Admin
+              </span>
+            </Link>
+
+            <Link
+              href="/admin/push"
+              prefetch={true}
+              onClick={() => setIsMoreOpen(false)}
+              className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Bell className="w-4 h-4 text-amber-600" />
+                <span>Broadcast Notifications</span>
+              </div>
+              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                Live
+              </span>
+            </Link>
+
+            <Link
+              href="/admin/gifts"
+              prefetch={true}
+              onClick={() => setIsMoreOpen(false)}
+              className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Gift className="w-4 h-4 text-emerald-600" />
+                <span>Voter Gift Tracker</span>
+              </div>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                Field
               </span>
             </Link>
 

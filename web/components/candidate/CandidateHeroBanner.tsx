@@ -58,7 +58,7 @@ export function CandidateHeroBanner({
   showBallotGuide = true,
 }: CandidateHeroBannerProps) {
   const [showRelativeInput, setShowRelativeInput] = useState(Boolean(relativeNameFilter));
-  const [liveVoterCount, setLiveVoterCount] = useState<number>(voterCount ?? 183778);
+  const [liveVoterCount, setLiveVoterCount] = useState<number>(voterCount ?? 183818);
 
   useEffect(() => {
     if (typeof voterCount === 'number' && voterCount > 0) {

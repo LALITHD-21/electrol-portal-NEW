@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
   }
 
   const windowStart = new Date(now - WINDOW_MINUTES * 60 * 1000);
-  let total = 183778;
+  let total = 183818;
   let snapshotAt: string | null = new Date().toISOString();
   let selfHealed = false;
   let rows: { created_at: string | null }[] = [];
@@ -175,8 +175,8 @@ export async function GET(request: NextRequest) {
     const message = err instanceof Error ? err.message : 'Live heartbeat failed';
     console.error('Analytics live heartbeat error:', message);
     const fallback: LiveDataResponse = {
-      version: `183778:${new Date().toISOString()}`,
-      total: 183778,
+      version: `183818:${new Date().toISOString()}`,
+      total: 183818,
       snapshotAt: new Date().toISOString(),
       addedLastWindow: 0,
       windowMinutes: WINDOW_MINUTES,

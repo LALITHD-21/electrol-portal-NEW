@@ -5,7 +5,7 @@ import { isLocalAnalyticsReady, getLocalVersion } from '@/lib/analytics/localAna
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-let cachedCount: number = 183778;
+let cachedCount: number = 183818;
 let lastFetchTime = 0;
 const CACHE_TTL_MS = 10 * 1000; // 10-second fast cache
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       const { count } = await supabase
         .from('electors')
         .select('id', { count: 'exact', head: true });
-      return count ?? 183778;
+      return count ?? 183818;
     };
 
     // Fast 1500ms timeout prevents server lag under cloud latency

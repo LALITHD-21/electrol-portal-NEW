@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Database, RefreshCw } from 'lucide-react';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
 
-const FALLBACK_ELECTORS_COUNT = 183778;
+const FALLBACK_ELECTORS_COUNT = 183818;
 
 export default function LiveRecordBadge() {
   const [count, setCount] = useState<number>(FALLBACK_ELECTORS_COUNT);

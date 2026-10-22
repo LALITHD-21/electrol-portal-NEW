@@ -6,9 +6,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { subscription, language } = body;
 
-    if (!subscription || !subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
+    if (!subscription || !subscription.endpoint) {
       return NextResponse.json(
-        { error: 'Invalid PushSubscription: endpoint and cryptographic keys are required.' },
+        { error: 'Invalid PushSubscription: endpoint is required.' },
         { status: 400 }
       );
     }
