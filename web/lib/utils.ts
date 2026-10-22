@@ -109,11 +109,38 @@ export function getInitials(name: string | null | undefined): string {
 export function formatElectorFullName(name: string | null | undefined): string {
     if (!name) return '—';
     let str = String(name).trim();
-    if (!str || str.toLowerCase() === 'null' || str.toLowerCase() === 'none') return '—';
+    if (!str || str.toLowerCase() === 'null' || str.toLowerCase() === 'none' || str.toLowerCase() === 'deleted' || str.toLowerCase() === 'dele ted') return '—';
+
+    // Strip leading OCR symbols like "#1398 ", "_— = ", "_-", "=", "#", "§", etc.
+    str = str.replace(/^[\s_—\-#=§\*\.\,\:;~`\^]+/, '');
+    // Strip trailing OCR symbols like " §", " #", " *", "_-", etc.
+    str = str.replace(/[\s_—\-#=§\*\.\,\:;~`\^]+$/, '');
+    // Strip embedded serial prefix e.g. "1398 " or "#1398 "
+    str = str.replace(/^#?\d{1,5}\s+/, '');
+    // Strip OCR bracket tags e.g. "[V", "[1", "]"
+    str = str.replace(/\[[A-Za-z0-9]*\]?/g, '');
+
+    if (!str || /^[\s_—\-#=§]+$/.test(str)) return '—';
+
     // Separate lowercase letters followed directly by uppercase letters (e.g., "RojaY" -> "Roja Y")
     str = str.replace(/([a-z])([A-Z])/g, '$1 $2');
     // Collapse redundant whitespace into exactly one space
     return str.replace(/\s+/g, ' ').trim();
+}
+
+export function cleanRelativeName(rel: string | null | undefined): string | null {
+    if (!rel) return null;
+    let str = String(rel).trim();
+    // Strip duplicated or leaked district headers (e.g. "CHITRADURGA CHITRADURGA", "TUMKUR TUMKUR (Dist)")
+    str = str.replace(/^(?:CHITRADURGA|TUMKUR|DAVANAGERE|KOLAR|CHIKKABALLAPURA|CHIKKABALLAPUR)\s+(?:CHITRADURGA|TUMKUR|DAVANAGERE|KOLAR|CHIKKABALLAPURA|CHIKKABALLAPUR)(?:\s+(?:Dist|District|\(Dist\)|\(District\)))?\s*/i, '');
+    str = str.replace(/^(?:Chitradurga|Tumkur|Davanagere|Kolar|Chikkaballapura)\s*(?:\(Dist\)|\(District\)|Dist|District)?\s*/gi, '').trim();
+    str = str.replace(/^[\s_—\-#=§\*\.\,\:;~`\^]+/, '');
+    str = str.replace(/[\s_—\-#=§\*\.\,\:;~`\^]+$/, '');
+    str = str.replace(/\[[A-Za-z0-9]*\]?/g, '');
+
+    if (!str || /^[\s_—\-#=§]+$/.test(str) || /^(?:CHITRADURGA|TUMKUR|DAVANAGERE|KOLAR|CHIKKABALLAPURA)$/i.test(str)) return null;
+    const res = formatElectorFullName(str);
+    return res === '—' ? null : res;
 }
 
 /**
