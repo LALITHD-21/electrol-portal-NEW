@@ -424,7 +424,7 @@ export function BallotGuideCard() {
       </div>
 
       {/* Prominent, Large & Perfectly Aligned Ballot Paper Specimen */}
-      <div className="relative w-full aspect-[546/187] rounded-2xl overflow-hidden bg-white shadow-soft-xs border border-slate-200/90">
+      <div className="relative w-full aspect-[1024/367] rounded-2xl overflow-hidden bg-white shadow-soft-xs border border-slate-200/90">
         <Image
           src="/ballot-candidate-guide.png"
           alt="Ballot Paper Specimen - Shashi Hulikuntemutt Sl. No. 1"

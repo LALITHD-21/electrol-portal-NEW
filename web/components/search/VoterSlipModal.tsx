@@ -564,8 +564,8 @@ Vote on polling day!`;
                 <img
                   src="/ballot-candidate-guide.png"
                   alt="Official Ballot Paper Specimen - Shashi Hulikuntemutt Sl. No. 1"
-                  width={823}
-                  height={295}
+                  width={1024}
+                  height={367}
                   style={{
                     width: '100%',
                     height: 'auto',
