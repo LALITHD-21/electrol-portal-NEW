@@ -670,7 +670,7 @@ button:focus-visible,
   width: max-content;
   white-space: nowrap;
   will-change: transform;
-  animation: tkr-scroll var(--tkr-duration, 38s) linear infinite;
+  animation: tkr-scroll var(--tkr-duration, 65s) linear infinite;
 }
 
 .tkr-bar:hover .tkr-track,

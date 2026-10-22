@@ -50,36 +50,20 @@ function BallotSeparator() {
 }
 
 export default function AnnouncementTicker() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
-  const [durationSec, setDurationSec] = useState(38);
+  const [durationSec, setDurationSec] = useState(65);
   const trackRef = useRef<HTMLDivElement>(null);
 
+  // Calculate gentle, easily readable speed (~38px/s) based on content width
   useEffect(() => {
-    // Check if dismissed in this browser session
-    try {
-      const dismissed = sessionStorage.getItem('tkr_banner_closed');
-      if (dismissed === 'true') {
-        setIsVisible(false);
-        return;
-      }
-    } catch {
-      // Ignore storage errors in restricted contexts
-    }
-    setIsVisible(true);
-  }, []);
-
-  // Calculate seamless speed (~80px/s) based on content width
-  useEffect(() => {
-    if (!isVisible) return;
-
     const computeSpeed = () => {
       if (trackRef.current) {
-        // Track width includes both duplicated sets; single loop is 50%
+        // Track width includes duplicated sets; single loop is 50%
         const singleSetWidth = trackRef.current.scrollWidth / 2;
         if (singleSetWidth > 0) {
-          const targetPxPerSec = 82; // ~80px/sec as specified
-          const calculatedSec = Math.max(20, Math.round(singleSetWidth / targetPxPerSec));
+          const targetPxPerSec = 38; // Gentle, comfortably readable scrolling speed
+          const calculatedSec = Math.max(45, Math.round(singleSetWidth / targetPxPerSec));
           setDurationSec(calculatedSec);
         }
       }
@@ -88,7 +72,7 @@ export default function AnnouncementTicker() {
     computeSpeed();
     window.addEventListener('resize', computeSpeed);
     return () => window.removeEventListener('resize', computeSpeed);
-  }, [isVisible]);
+  }, []);
 
   // Handle Page Visibility API: pause when tab is inactive to conserve battery and memory
   useEffect(() => {
@@ -103,15 +87,6 @@ export default function AnnouncementTicker() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
-
-  const handleClose = () => {
-    setIsVisible(false);
-    try {
-      sessionStorage.setItem('tkr_banner_closed', 'true');
-    } catch {
-      // Ignore
-    }
-  };
 
   if (!isVisible) return null;
 
@@ -174,28 +149,6 @@ export default function AnnouncementTicker() {
           ))}
         </div>
       </div>
-
-      {/* 4. Fixed Right Close Button (Remembers choice for session) */}
-      <button
-        type="button"
-        onClick={handleClose}
-        className="tkr-close-btn"
-        aria-label="Close announcement banner"
-        title="Dismiss announcement for this session"
-      >
-        <svg
-          className="w-4 h-4 text-white"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
     </aside>
   );
 }
