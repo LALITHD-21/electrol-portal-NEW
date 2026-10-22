@@ -165,6 +165,11 @@ export async function saveSubscription(
   language: 'en' | 'kn' = 'en',
   userAgent?: string
 ): Promise<PushSubscriptionRecord> {
+  // Only accept genuine web push endpoints from valid push services (FCM, Apple APNs, Mozilla, etc.)
+  if (!subscription.endpoint || (!subscription.endpoint.startsWith('https://') && !subscription.endpoint.startsWith('http://'))) {
+    throw new Error('Invalid push service endpoint. Real browser push requires a valid push gateway URL.');
+  }
+
   const current = await getAllSubscriptions();
   const existingIndex = current.findIndex((s) => s.endpoint === subscription.endpoint);
 
@@ -255,15 +260,22 @@ export async function broadcastPushNotification(payload: SendPushPayload): Promi
   const deadEndpoints: string[] = [];
 
   for (const sub of subscribers) {
+    // 0. Filter out invalid/legacy mock endpoints
+    if (!sub.endpoint || (!sub.endpoint.startsWith('https://') && !sub.endpoint.startsWith('http://'))) {
+      deadEndpoints.push(sub.endpoint);
+      removedDead++;
+      continue;
+    }
+
     // 1. Language filter
     if (payload.language && payload.language !== 'all' && sub.language !== payload.language) {
       continue;
     }
 
-    // 2. Maximum 3 notifications per day safety enforcement
+    // 2. High-volume campaign delivery safety: allow up to 25 broadcasts/day, or bypass for manual admin broadcasts
     const subDate = sub.lastNotificationDate || '';
     let currentDailyCount = subDate === todayKey ? sub.dailyNotificationCount || 0 : 0;
-    if (currentDailyCount >= 3) {
+    if (!payload.bypassRateLimit && currentDailyCount >= 25) {
       rateLimited++;
       continue;
     }

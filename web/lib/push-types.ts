@@ -21,6 +21,7 @@ export interface SendPushPayload {
   icon?: string;
   badge?: string;
   language?: 'all' | 'en' | 'kn';
+  bypassRateLimit?: boolean;
 }
 
 // Strict Candidate Name invariants

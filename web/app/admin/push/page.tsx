@@ -116,22 +116,14 @@ export default function AdminPushNotificationPage() {
       }
 
       let sub: any = null;
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          const converted = urlBase64ToUint8Array(vapidKey);
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: converted,
-          });
-        }
-      } catch (swErr: any) {
-        console.warn('Push manager subscribe fallback:', swErr);
-        sub = {
-          endpoint: `admin_device_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-          keys: { p256dh: 'admin_console_direct', auth: 'admin_console_direct' },
-        };
+      const reg = await navigator.serviceWorker.ready;
+      sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        const converted = urlBase64ToUint8Array(vapidKey);
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: converted,
+        });
       }
 
       const res = await fetch('/api/subscribe', {

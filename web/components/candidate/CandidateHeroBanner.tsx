@@ -11,6 +11,7 @@ import {
   ClipboardList,
   X,
   Loader2,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -148,6 +149,22 @@ export function CandidateHeroBanner({
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Push Notification Alerts Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('open-push-prompt'));
+              }
+            }}
+            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-black border border-amber-300 bg-amber-50/95 text-amber-900 hover:bg-amber-100 active:scale-95 shadow-2xs transition"
+            aria-label="Polling Alerts"
+            title="Enable or Test Polling Day Alerts"
+          >
+            <Bell className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+            <span>{language === 'kn' ? 'ಜ್ಞಾಪನೆ' : 'Alerts'}</span>
+          </button>
+
           {/* Prominent App Install Button */}
           <button
             type="button"

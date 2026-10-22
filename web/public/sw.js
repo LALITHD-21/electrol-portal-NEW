@@ -63,7 +63,7 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/icon-192.png',
+    icon: data.icon || '/app-logo.png',
     badge: data.badge || '/icon-192.png',
     data: {
       url: data.url || '/search',
@@ -82,7 +82,17 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title, options).catch((err) => {
+      console.warn('Rich notification failed, falling back to minimal notification:', err);
+      return self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: data.icon || '/app-logo.png',
+        badge: data.badge || '/icon-192.png',
+        data: {
+          url: data.url || '/search',
+        },
+      });
+    })
   );
 });
 

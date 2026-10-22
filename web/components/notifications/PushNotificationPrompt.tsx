@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { Bell, BellOff, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bell, BellOff, X, CheckCircle2, AlertCircle, Sparkles, Smartphone, Share2 } from 'lucide-react';
 
 const VAPID_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
@@ -31,9 +31,76 @@ export default function PushNotificationPrompt() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showIosGuide, setShowIosGuide] = useState(false);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
   const [isIosBrowser, setIsIosBrowser] = useState(false);
+
+  // Core subscribe helper with real push gateway
+  const performSubscription = useCallback(async (isAuto = false) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+
+      if (!sub) {
+        const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedKey,
+        });
+      }
+
+      if (sub && sub.endpoint) {
+        // Register with server
+        await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscription: sub,
+            language: language === 'kn' ? 'kn' : 'en',
+          }),
+        });
+
+        setIsSubscribed(true);
+        try {
+          localStorage.setItem(STORAGE_KEY_SUBSCRIBED, sub.endpoint);
+        } catch {}
+
+        return sub;
+      }
+    } catch (err) {
+      console.warn('Subscription registration error:', err);
+      if (!isAuto) throw err;
+    }
+    return null;
+  }, [language]);
+
+  // Trigger test notification locally on the device to verify instant display
+  const fireTestNotification = useCallback(async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(
+          language === 'kn' ? '✅ ಜ್ಞಾಪನೆಗಳು ಸಕ್ರಿಯವಾಗಿವೆ — ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್' : '✅ Alerts Active — Shashi Hulikuntemutt',
+          {
+            body:
+              language === 'kn'
+                ? 'ಮತದಾನ ದಿನ: 23 ಅಕ್ಟೋಬರ್ 2026 (ಬೆಳಿಗ್ಗೆ 8:00 - ಸಂಜೆ 4:00). ನಿಮ್ಮ ಮೊಬೈಲ್‌ನಲ್ಲಿ ಅಧಿಕೃತ ಮಾಹಿತಿ ದೊರೆಯಲಿದೆ.'
+                : 'Polling Day: Friday, 23 Oct 2026 (8:00 AM – 4:00 PM). Live alerts are active on this device.',
+            icon: '/app-logo.png',
+            badge: '/icon-192.png',
+            tag: 'test-notification',
+            vibrate: [200, 100, 200],
+            data: { url: '/search' },
+          } as any
+        );
+      }
+    } catch (e) {
+      console.warn('Native test notification show error:', e);
+    }
+  }, [language]);
 
   useEffect(() => {
     setMounted(true);
@@ -43,7 +110,8 @@ export default function PushNotificationPrompt() {
     // Detect iOS standalone mode vs regular mobile Safari
     const ua = window.navigator.userAgent.toLowerCase();
     const isIos = /iphone|ipad|ipod/.test(ua);
-    const isStandalone = ('standalone' in window.navigator && (window.navigator as any).standalone) ||
+    const isStandalone =
+      ('standalone' in window.navigator && (window.navigator as any).standalone) ||
       window.matchMedia('(display-mode: standalone)').matches;
 
     if (isIos && !isStandalone) {
@@ -58,40 +126,99 @@ export default function PushNotificationPrompt() {
     const currentPermission = Notification.permission;
     setPermission(currentPermission);
 
-    // Check existing subscription
-    navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => {
-        if (sub) {
-          setIsSubscribed(true);
-        } else if (currentPermission === 'default') {
-          // Check 7-day snooze
-          const snoozedUntil = localStorage.getItem(STORAGE_KEY_SNOOZE);
-          const now = Date.now();
-          if (!snoozedUntil || now > parseInt(snoozedUntil, 10)) {
-            // Delay presentation by 2.8s after page load to preserve non-intrusive flow
-            const timer = setTimeout(() => {
-              setShowPrompt(true);
-            }, 2800);
-            return () => clearTimeout(timer);
-          }
+    // If permission already granted, automatically verify/refresh subscription in background
+    if (currentPermission === 'granted') {
+      performSubscription(true);
+    } else if (currentPermission === 'default') {
+      // Check 7-day snooze
+      const snoozedUntil = localStorage.getItem(STORAGE_KEY_SNOOZE);
+      const now = Date.now();
+      if (!snoozedUntil || now > parseInt(snoozedUntil, 10)) {
+        const timer = setTimeout(() => {
+          setShowPrompt(true);
+        }, 2200);
+        return () => clearTimeout(timer);
+      }
+    }
+
+    // Global listener for on-demand trigger (from bell buttons across the UI)
+    const handleOpenPrompt = async () => {
+      if (isIos && !isStandalone) {
+        setShowIosGuide(true);
+        return;
+      }
+
+      if (!('Notification' in window)) {
+        setFeedback({
+          type: 'error',
+          message: 'Push notifications are not supported on this browser.',
+        });
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        setLoading(true);
+        try {
+          await performSubscription(false);
+          await fireTestNotification();
+          setFeedback({
+            type: 'success',
+            message:
+              language === 'kn'
+                ? '✅ ಅಧಿಸೂಚನೆಗಳು ಸಕ್ರಿಯವಾಗಿವೆ! ಮೊಬೈಲ್ ಪರದೆಯಲ್ಲಿ ಪರೀಕ್ಷಾ ಸಂದೇಶ ಕಳುಹಿಸಲಾಗಿದೆ.'
+                : '✅ Alerts are active! Sent an instant screen test notification.',
+          });
+        } catch {
+          await fireTestNotification();
+          setFeedback({
+            type: 'success',
+            message:
+              language === 'kn'
+                ? '✅ ಪರೀಕ್ಷಾ ಅಧಿಸೂಚನೆ ಕಳುಹಿಸಲಾಗಿದೆ.'
+                : '✅ Test notification sent to screen.',
+          });
+        } finally {
+          setLoading(false);
+          setTimeout(() => setFeedback(null), 4500);
         }
-      })
-      .catch((err) => {
-        console.warn('Push manager subscription check error:', err);
-      });
-  }, []);
+        return;
+      }
+
+      if (Notification.permission === 'denied') {
+        setFeedback({
+          type: 'info',
+          message:
+            language === 'kn'
+              ? '⚠️ ಅಧಿಸೂಚನೆಗಳನ್ನು ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್ಸ್‌ಗಳಲ್ಲಿ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ. URL ಬಾರ್‌ನಲ್ಲಿರುವ ಲಾಕ್ ಐಕಾನ್ ಒತ್ತಿ ಅನುಮತಿಸಿ.'
+              : '⚠️ Notifications are blocked in browser settings. Tap the lock icon in the address bar to allow.',
+        });
+        setTimeout(() => setFeedback(null), 5000);
+        return;
+      }
+
+      // Default permission: open the prompt
+      setShowPrompt(true);
+    };
+
+    window.addEventListener('open-push-prompt', handleOpenPrompt);
+    return () => window.removeEventListener('open-push-prompt', handleOpenPrompt);
+  }, [fireTestNotification, language, performSubscription]);
 
   const handleAllow = async () => {
     setLoading(true);
     setFeedback(null);
 
     try {
+      if (isIosBrowser) {
+        setShowPrompt(false);
+        setShowIosGuide(true);
+        return;
+      }
+
       if (!isSupported) {
         throw new Error('Push notifications are not supported by this browser.');
       }
 
-      // Explicit user consent request
       const perm = await Notification.requestPermission();
       setPermission(perm);
 
@@ -104,53 +231,14 @@ export default function PushNotificationPrompt() {
               ? 'ಅಧಿಸೂಚನೆಗಳ ಅನುಮತಿಯನ್ನು ನಿರಾಕರಿಸಲಾಗಿದೆ. ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್ಸ್‌ಗಳಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.'
               : 'Notification permission was dismissed. You can change this in browser settings.',
         });
+        setTimeout(() => setFeedback(null), 4000);
         return;
       }
 
-      let subscription: any = null;
+      await performSubscription(false);
+      await fireTestNotification();
 
-      // 1. Attempt standard browser PushManager subscription
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          try {
-            await existing.unsubscribe();
-          } catch {}
-        }
-        const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-        subscription = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedKey,
-        });
-      } catch (pushErr: any) {
-        console.warn('Browser PushManager error, falling back to local push notifications:', pushErr);
-        // Fallback: Use unique device identifier for local notifications
-        const fallbackEndpoint = `device_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        subscription = {
-          endpoint: fallbackEndpoint,
-          keys: { p256dh: 'device_direct', auth: 'device_direct' },
-        };
-      }
-
-      // 2. Register subscription with backend
-      try {
-        await fetch('/api/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subscription,
-            language: language === 'kn' ? 'kn' : 'en',
-          }),
-        });
-      } catch (apiErr) {
-        console.warn('API subscription record error:', apiErr);
-      }
-
-      setIsSubscribed(true);
       setShowPrompt(false);
-      localStorage.setItem(STORAGE_KEY_SUBSCRIBED, subscription.endpoint);
-
       setFeedback({
         type: 'success',
         message:
@@ -159,34 +247,12 @@ export default function PushNotificationPrompt() {
             : '✅ Polling Day reminders enabled! (Shashi Hulikuntemutt)',
       });
 
-      // 3. Show immediate welcome notification to confirm it's working
-      try {
-        if ('serviceWorker' in navigator) {
-          const reg = await navigator.serviceWorker.ready;
-          reg.showNotification('Polling Day — 23 Oct 2026', {
-            body: language === 'kn'
-              ? 'ಮತದಾನ ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ (ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್)'
-              : 'Voting 8:00 AM – 4:00 PM (Shashi Hulikuntemutt)',
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            tag: 'welcome-notification',
-          });
-        }
-      } catch {}
-
-      // Auto-hide feedback toast after 4s
-      setTimeout(() => setFeedback(null), 4000);
+      setTimeout(() => setFeedback(null), 4500);
     } catch (err: any) {
       console.error('Subscription error:', err);
-      // Even if an unexpected error occurs, don't leave the user stuck
-      setIsSubscribed(true);
-      setShowPrompt(false);
       setFeedback({
-        type: 'success',
-        message:
-          language === 'kn'
-            ? '✅ ಮತದಾನ ದಿನದ ಜ್ಞಾಪನೆಗಳು ಸಕ್ರಿಯಗೊಂಡಿವೆ! (ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್)'
-            : '✅ Polling Day reminders enabled! (Shashi Hulikuntemutt)',
+        type: 'error',
+        message: err.message || 'Failed to subscribe to notifications.',
       });
       setTimeout(() => setFeedback(null), 4000);
     } finally {
@@ -238,7 +304,7 @@ export default function PushNotificationPrompt() {
     <>
       {/* 1. Optional Feedback Toast */}
       {feedback && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-fadeIn">
+        <div className="fixed top-14 sm:top-5 right-3 left-3 sm:left-auto sm:right-5 z-50 max-w-sm animate-fadeIn">
           <div
             className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl text-xs sm:text-sm font-semibold border ${
               feedback.type === 'success'
@@ -264,7 +330,61 @@ export default function PushNotificationPrompt() {
         </div>
       )}
 
-      {/* 2. Non-Intrusive Friendly Opt-In Banner (Bottom-Right on Desktop, Bottom Sheet on Mobile) */}
+      {/* 2. iOS Safari Step-by-Step Guidance Modal */}
+      {showIosGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {language === 'kn' ? 'ಐಫೋನ್‌ನಲ್ಲಿ ಅಧಿಸೂಚನೆ ಪಡೆಯಲು' : 'Push Alerts on iPhone'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowIosGuide(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {language === 'kn'
+                ? 'ಆಪಲ್ ಐಫೋನ್‌ನಲ್ಲಿ ಅಧಿಸೂಚನೆಗಳನ್ನು ಸ್ವೀಕರಿಸಲು, ಈ ಆ್ಯಪ್ ಅನ್ನು ಮುಖಪುಟಕ್ಕೆ (Home Screen) ಸೇರಿಸಬೇಕಾಗಿದೆ:'
+                : 'Apple iOS requires adding the portal to your Home Screen to deliver live push notifications:'}
+            </p>
+
+            <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200/80 text-xs text-slate-700">
+              <div className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">1</span>
+                <span>{language === 'kn' ? 'ಸಫಾರಿ ಕೆಳಭಾಗದಲ್ಲಿರುವ ಶೇರ್ (Share) ಐಕಾನ್ ಒತ್ತಿ' : 'Tap the Share icon at the bottom of Safari'} <Share2 className="w-3.5 h-3.5 inline text-blue-600" /></span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">2</span>
+                <span>{language === 'kn' ? "'Add to Home Screen' ಆಯ್ಕೆಮಾಡಿ" : "Scroll down and tap 'Add to Home Screen'"}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 font-bold text-[10px]">3</span>
+                <span>{language === 'kn' ? 'ಮುಖಪುಟದಿಂದ ಆ್ಯಪ್ ತೆರೆದು ಜ್ಞಾಪನೆ ಸಕ್ರಿಯಗೊಳಿಸಿ' : 'Open from Home Screen and tap Allow to get alerts'}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowIosGuide(false)}
+              className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 active:scale-95 transition"
+            >
+              {language === 'kn' ? 'ಅರ್ಥವಾಯಿತು / Done' : 'Got it'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Non-Intrusive Friendly Opt-In Banner (Bottom-Right on Desktop, Bottom Sheet on Mobile) */}
       {showPrompt && !isSubscribed && (
         <aside
           role="complementary"
@@ -331,7 +451,46 @@ export default function PushNotificationPrompt() {
         </aside>
       )}
 
-      {/* 3. Unsubscribe option pill for subscribed users (discreet in footer or accessible) */}
+      {/* 4. Persistent Mobile Floating Bell Button (Discreet, easily tappable at any time) */}
+      {!showPrompt && (
+        <div className="fixed bottom-4 left-3 z-30 sm:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('open-push-prompt'));
+              }
+            }}
+            disabled={loading}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold shadow-lg border backdrop-blur-md transition-all active:scale-95 ${
+              isSubscribed || permission === 'granted'
+                ? 'bg-emerald-50/95 border-emerald-300 text-emerald-800'
+                : 'bg-white/95 border-blue-300 text-blue-800'
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  isSubscribed || permission === 'granted' ? 'bg-emerald-400' : 'bg-blue-400'
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isSubscribed || permission === 'granted' ? 'bg-emerald-500' : 'bg-blue-500'
+                }`}
+              />
+            </span>
+            <Bell className="w-3.5 h-3.5" />
+            <span>
+              {isSubscribed || permission === 'granted'
+                ? (language === 'kn' ? 'ಜ್ಞಾಪನೆ ಸಕ್ರಿಯ' : 'Alerts Active')
+                : (language === 'kn' ? 'ಜ್ಞಾಪನೆ ಪಡೆಯಿರಿ' : 'Get Alerts')}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* 5. Desktop Unsubscribe option pill for subscribed users */}
       {isSubscribed && (
         <div className="fixed bottom-3 right-3 z-30 hidden md:block">
           <button

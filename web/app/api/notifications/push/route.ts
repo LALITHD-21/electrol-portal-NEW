@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
         url: template.url,
         tag: template.tag,
         language: language || 'all',
+        bypassRateLimit: true,
       };
     } else {
       if (!title || !messageBody) {
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
         url: url || '/search',
         tag: tag || 'campaign-announcement',
         language: language || 'all',
+        bypassRateLimit: true,
       };
     }
 
