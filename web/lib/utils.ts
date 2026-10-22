@@ -27,6 +27,8 @@ export function isSyntheticEpic(epic: string | null | undefined): boolean {
     if (!str || str === '—' || str === 'NULL' || str === 'NONE' || str === 'NIL' || str === 'NA') return true;
     if (str.includes('_')) return true;
     if (/^P\d{1,4}/.test(str)) return true;
+    if (/^NOP\d+/.test(str)) return true;
+    if (/^[DE]\d{2}\d{6,8}$/.test(str)) return true;
     return false;
 }
 

@@ -4,12 +4,13 @@ import { requireRole, isAuthError } from '@/lib/auth/roles';
 import { boothTableQuerySchema } from '@/features/analytics/schema';
 import { BoothTableRow, BoothTableResponse } from '@/features/analytics/types';
 import { VERIFIED_BOOTHS_RAW, RawBoothRow } from '@/features/analytics/mock/verifiedBooths';
+import { isLocalAnalyticsReady, getLocalBooths } from '@/lib/analytics/localAnalytics';
 
 export const dynamic = 'force-dynamic';
 
 let cachedDefaultBooths: BoothTableResponse | null = null;
 let cachedBoothsTime = 0;
-const BOOTHS_CACHE_TTL_MS = 60 * 1000;
+const BOOTHS_CACHE_TTL_MS = 30 * 1000;
 
 export async function GET(request: NextRequest) {
   // 1. Role-based security boundary (Admin and Operator)
@@ -35,9 +36,76 @@ export async function GET(request: NextRequest) {
   if (isDefaultView && cachedDefaultBooths && Date.now() - cachedBoothsTime < BOOTHS_CACHE_TTL_MS) {
     return NextResponse.json(cachedDefaultBooths, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
       },
     });
+  }
+
+  // Primary: Real-time local SQLite booth aggregation
+  if (isLocalAnalyticsReady()) {
+    try {
+      const allBooths = getLocalBooths();
+      if (allBooths) {
+        let filtered = allBooths.filter((b) => {
+          if (district && b.district?.toLowerCase() !== district.toLowerCase()) return false;
+          if (ac && b.ac_name?.toLowerCase() !== ac.toLowerCase()) return false;
+          if (search) {
+            const s = search.toLowerCase();
+            const matchesPart = b.part_number.toLowerCase().includes(s);
+            const matchesName = b.polling_station_name?.toLowerCase().includes(s) || false;
+            const matchesAddr = b.polling_address?.toLowerCase().includes(s) || false;
+            if (!matchesPart && !matchesName && !matchesAddr) return false;
+          }
+          return true;
+        });
+
+        // Sort booths
+        filtered.sort((a, b) => {
+          let comparison = 0;
+          if (sortBy === 'part_number') {
+            const numA = parseInt(a.part_number, 10);
+            const numB = parseInt(b.part_number, 10);
+            comparison = isNaN(numA) || isNaN(numB)
+              ? a.part_number.localeCompare(b.part_number)
+              : numA - numB;
+          } else if (sortBy === 'total') {
+            comparison = a.total_electors - b.total_electors;
+          } else if (sortBy === 'male') {
+            comparison = a.male_count - b.male_count;
+          } else if (sortBy === 'female') {
+            comparison = a.female_count - b.female_count;
+          } else if (sortBy === 'mobile_pct') {
+            comparison = a.mobile_pct - b.mobile_pct;
+          }
+
+          return sortOrder === 'desc' ? -comparison : comparison;
+        });
+
+        const total = filtered.length;
+        const offset = (page - 1) * pageSize;
+        const paginatedBooths = filtered.slice(offset, offset + pageSize);
+
+        const response: BoothTableResponse = {
+          booths: paginatedBooths,
+          total,
+          page,
+          pageSize,
+        };
+
+        if (isDefaultView) {
+          cachedDefaultBooths = response;
+          cachedBoothsTime = Date.now();
+        }
+
+        return NextResponse.json(response, {
+          headers: {
+            'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+          },
+        });
+      }
+    } catch (localErr) {
+      console.warn('Local booths query failed, falling back to remote:', localErr);
+    }
   }
 
   try {
@@ -143,12 +211,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Error fetching booths table';
-    console.error('Booths endpoint exception:', err);
+    const message = err instanceof Error ? err.message : 'Failed to retrieve booth summary';
+    console.error('Booths summary exception:', err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

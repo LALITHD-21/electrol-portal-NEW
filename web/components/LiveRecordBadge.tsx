@@ -4,12 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Database, RefreshCw } from 'lucide-react';
 import AnimatedNumber from '@/components/ui/AnimatedNumber';
 
+const FALLBACK_ELECTORS_COUNT = 183778;
+
 export default function LiveRecordBadge() {
-  const [count, setCount] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [count, setCount] = useState<number>(FALLBACK_ELECTORS_COUNT);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const isVisibleRef = useRef<boolean>(true);
-
   const abortCtrlRef = useRef<AbortController | null>(null);
 
   const fetchLiveCount = async (manual = false) => {
@@ -22,16 +23,16 @@ export default function LiveRecordBadge() {
 
     try {
       const url = manual ? `/api/stats?manual=1&t=${Date.now()}` : '/api/stats';
-      const res = await fetch(url, { signal: abortCtrl.signal });
+      const res = await fetch(url, { signal: abortCtrl.signal, cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (typeof data.count === 'number') {
+        if (typeof data.count === 'number' && data.count > 0) {
           setCount(data.count);
         }
       }
     } catch (e: unknown) {
       if ((e as Error)?.name !== 'AbortError') {
-        console.error('Failed to fetch live electors count', e);
+        console.warn('Live electors count fetch failed:', e);
       }
     } finally {
       setIsLoading(false);
@@ -47,16 +48,34 @@ export default function LiveRecordBadge() {
       if (isVisibleRef.current) fetchLiveCount();
     };
 
+    const handleFocus = () => {
+      if (isVisibleRef.current) fetchLiveCount();
+    };
+
+    // Cross-component broadcast listener for real-time instant sync
+    const handleElectorUpdate = (e: Event) => {
+      const custom = e as CustomEvent<{ version?: string; total?: number }>;
+      if (custom.detail?.total && typeof custom.detail.total === 'number') {
+        setCount(custom.detail.total);
+      } else {
+        fetchLiveCount(true);
+      }
+    };
+
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', handleVisibility);
     }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+      window.addEventListener('electors-updated', handleElectorUpdate);
+    }
 
-    // Auto-refresh live count every 30 seconds when tab is active (reduced from 5s to eliminate server congestion)
+    // Auto-refresh live count every 10 seconds when tab is active for genuine real-time synchronization
     const interval = setInterval(() => {
       if (isVisibleRef.current) {
         fetchLiveCount();
       }
-    }, 30000);
+    }, 10000);
 
     return () => {
       clearInterval(interval);
@@ -65,6 +84,10 @@ export default function LiveRecordBadge() {
       }
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibility);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleFocus);
+        window.removeEventListener('electors-updated', handleElectorUpdate);
       }
     };
   }, []);

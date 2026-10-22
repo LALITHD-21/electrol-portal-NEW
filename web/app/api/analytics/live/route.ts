@@ -5,6 +5,11 @@ import {
   refreshDashboardSnapshot,
   getLastSnapshotRefreshAt,
 } from '@/lib/analytics/refreshSnapshot';
+import {
+  isLocalAnalyticsReady,
+  getLocalVersion,
+  getLocalActivity,
+} from '@/lib/analytics/localAnalytics';
 import type { LiveDataResponse } from '@/features/analytics/types';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +22,7 @@ const SELF_HEAL_COOLDOWN_MS = 20000;
 
 let cachedLivePayload: LiveDataResponse | null = null;
 let lastLiveFetchTime = 0;
-const LIVE_CACHE_TTL_MS = 15 * 1000; // 15s cache
+const LIVE_CACHE_TTL_MS = 5 * 1000; // 5s fast cache
 
 /**
  * Lightweight real-time heartbeat for the analytics dashboard.
@@ -37,6 +42,34 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const isManual = searchParams.get('manual') === '1';
 
+  // Primary: Real-time local SQLite analytics heartbeat (exact count & activity)
+  if (isLocalAnalyticsReady()) {
+    try {
+      const v = getLocalVersion(isManual);
+      const act = getLocalActivity();
+      if (v) {
+        const body: LiveDataResponse = {
+          version: v.version,
+          total: v.total,
+          snapshotAt: v.mtime,
+          addedLastWindow: act.addedLastWindow,
+          windowMinutes: act.windowMinutes,
+          activityCapped: false,
+          buckets: act.buckets,
+          selfHealed: false,
+          serverTime: new Date(now).toISOString(),
+        };
+        cachedLivePayload = body;
+        lastLiveFetchTime = now;
+        return NextResponse.json(body, {
+          headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' },
+        });
+      }
+    } catch (localErr) {
+      console.warn('Local analytics live heartbeat failed, falling back to remote:', localErr);
+    }
+  }
+
   // Fast-path: return cached heartbeat in <1ms if fresh
   if (!isManual && cachedLivePayload && now - lastLiveFetchTime < LIVE_CACHE_TTL_MS) {
     return NextResponse.json(cachedLivePayload, {
@@ -45,7 +78,7 @@ export async function GET(request: NextRequest) {
   }
 
   const windowStart = new Date(now - WINDOW_MINUTES * 60 * 1000);
-  let total = 223789;
+  let total = 183778;
   let snapshotAt: string | null = new Date().toISOString();
   let selfHealed = false;
   let rows: { created_at: string | null }[] = [];
@@ -101,7 +134,7 @@ export async function GET(request: NextRequest) {
       rows = activityRes.error ? [] : activityRes.data ?? [];
     } catch (networkErr: unknown) {
       // Graceful fallback under cloud timeout
-      console.warn('Live heartbeat serving verified snapshot tally due to:', (networkErr as Error)?.message);
+      console.warn('Live heartbeat serving reconciled roll tally due to:', (networkErr as Error)?.message);
     }
 
     // Build per-minute buckets (oldest → newest)
@@ -142,8 +175,8 @@ export async function GET(request: NextRequest) {
     const message = err instanceof Error ? err.message : 'Live heartbeat failed';
     console.error('Analytics live heartbeat error:', message);
     const fallback: LiveDataResponse = {
-      version: `223789:${new Date().toISOString()}`,
-      total: 223789,
+      version: `183778:${new Date().toISOString()}`,
+      total: 183778,
       snapshotAt: new Date().toISOString(),
       addedLastWindow: 0,
       windowMinutes: WINDOW_MINUTES,

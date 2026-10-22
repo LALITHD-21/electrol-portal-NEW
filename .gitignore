@@ -76,3 +76,10 @@ etl/reports/
 !web/electors.db
 *_backup.*
 electors_number*.csv
+FINAL VOTERS/
+final list/
+exports/
+etl/parsed_448_cache.json
+Newly_Added_Voters_With_Phone_Numbers_2026.xlsx
+web/scripts/sync_all_to_supabase.js
+

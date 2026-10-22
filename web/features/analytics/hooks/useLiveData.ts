@@ -14,7 +14,7 @@ interface UseLiveDataOptions {
 }
 
 export function useLiveData({
-  pollInterval = 20000,
+  pollInterval = 15000,
   onVersionChange,
   enabled = true,
 }: UseLiveDataOptions = {}) {
@@ -62,9 +62,16 @@ export function useLiveData({
       setStatus('live');
       setError(null);
 
-      // Version diff detection
+      // Version diff detection & cross-component broadcast
       if (prevVersionRef.current !== null && prevVersionRef.current !== data.version) {
         onVersionChangeRef.current?.(data.version, prevVersionRef.current);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('electors-updated', {
+              detail: { version: data.version, total: data.total },
+            })
+          );
+        }
       }
       prevVersionRef.current = data.version;
     } catch (err: unknown) {
