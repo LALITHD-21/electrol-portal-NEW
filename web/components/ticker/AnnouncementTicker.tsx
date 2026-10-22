@@ -20,31 +20,26 @@ export interface TickerItemConfig {
 export const TICKER_ITEMS: TickerItemConfig[] = [
   {
     id: 'item-1',
-    text: 'VOTE FOR SHASHI HULIKUNTEMUTT',
-    isHeadline: true, // Uppercase, weight 800, accent colour #FFD54A, first in loop
+    text: 'ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್ ಅವರಿಗೆ ಮತ ನೀಡಿ',
+    isHeadline: true, // Accent highlight
   },
   {
     id: 'item-2',
-    text: 'ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್ ಅವರಿಗೆ ಮತ ನೀಡಿ',
-    isHeadline: false,
-  },
-  {
-    id: 'item-3',
     text: 'In the name of Shashi Hulikuntemutt',
     isHeadline: false,
   },
   {
-    id: 'item-4',
+    id: 'item-3',
     text: 'ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್ ಅವರ ಹೆಸರಿನಲ್ಲಿ',
     isHeadline: false,
   },
   {
-    id: 'item-5',
+    id: 'item-4',
     text: 'ಮತದಾನ ದಿನಾಂಕ: 23 ಅಕ್ಟೋಬರ್ 2026 (ಶುಕ್ರವಾರ) | ಸಮಯ: ಬೆಳಿಗ್ಗೆ 8 ರಿಂದ ಸಂಜೆ 4 ರವರೆಗೆ',
     isHeadline: false,
   },
   {
-    id: 'item-6',
+    id: 'item-5',
     text: 'Polling Day: Friday, 23 October 2026 | Time: 8:00 AM – 4:00 PM',
     isHeadline: false,
   },
