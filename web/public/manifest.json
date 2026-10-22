@@ -1,14 +1,14 @@
 {
-  "name": "Electoral Lookup · South-East Graduates",
-  "short_name": "Voter Search",
-  "description": "Electoral voter profile lookup and voter slip download for Karnataka South-East Graduates Constituency",
+  "name": "SHASHI HULIKUNTEMUTT · ಶಶಿ ಹುಲಿಕುಂಟೆಮಠ್ - Voter Search",
+  "short_name": "SHASHI HULIKUNTEMUTT",
+  "description": "Official Electoral Voter Search & Campaign Portal for Shashi Hulikuntemutt (INC Candidate) - Karnataka South-East Graduates' Constituency",
   "id": "/search",
   "start_url": "/search",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#0B2A8A",
   "icons": [
     {
       "src": "/icon-192.png",

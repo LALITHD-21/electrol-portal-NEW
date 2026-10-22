@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import MobileZoomDisabler from "@/components/MobileZoomDisabler";
+import AnnouncementTicker from "@/components/ticker/AnnouncementTicker";
+import PushNotificationPrompt from "@/components/notifications/PushNotificationPrompt";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -23,17 +26,17 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#2563eb",
+  themeColor: "#0B2A8A",
 };
 
 export const metadata: Metadata = {
-  title: "ELECTORAL-LOOKUP OF South-East & Central Karnataka Constituency",
-  description: "Internal portal for secure voter profile lookup by EPIC number across Karnataka Legislative Council rolls",
-  manifest: "/manifest.json",
+  title: "SHASHI HULIKUNTEMUTT · Electoral Lookup - South-East Graduates' Constituency",
+  description: "Official portal for voter profile lookup and polling updates for candidate Shashi Hulikuntemutt across Karnataka Legislative Council rolls",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Voter Search",
+    title: "SHASHI HULIKUNTEMUTT",
   },
   icons: {
     icon: [
@@ -48,8 +51,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { LanguageProvider } from "@/lib/i18n/LanguageContext";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -58,13 +59,21 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        {/* Noto Sans Kannada & Noto Sans Google Fonts with display=swap */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;600;700;800&family=Noto+Sans:wght@400;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+
+        <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" href="/app-logo.png" />
         <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Voter Search" />
+        <meta name="apple-mobile-web-app-title" content="SHASHI HULIKUNTEMUTT" />
         <meta name="mobile-web-app-capable" content="yes" />
         <script
           dangerouslySetInnerHTML={{
@@ -87,7 +96,14 @@ export default function RootLayout({
       <body className="antialiased bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
         <MobileZoomDisabler />
         <LanguageProvider>
+          {/* 1. Full-width Announcement Ticker at the very top, above any header */}
+          <AnnouncementTicker />
+
+          {/* 2. Main Page Content Viewport */}
           {children}
+
+          {/* 3. Non-intrusive Opt-in Push Notification Prompt */}
+          <PushNotificationPrompt />
         </LanguageProvider>
       </body>
     </html>
